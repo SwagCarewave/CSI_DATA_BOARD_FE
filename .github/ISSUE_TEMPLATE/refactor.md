@@ -1,5 +1,5 @@
 ---
-name: Refactor
+name: ♻️Refactor
 about: 코드 리팩토링 작업
 title: "[REFACTOR] "
 labels: refactor
