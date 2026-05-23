@@ -1,3 +1,11 @@
+---
+name: Bug
+about: 버그 수정 이슈
+title: "[BUG] "
+labels: bug
+assignees: ""
+---
+
 ## ❗ 버그 설명
 
 ## 🔁 재현 방법 (Given-When-Then)
@@ -11,13 +19,6 @@
 ## 🤔 기대한 동작
 
 ## 🐞 실제 동작
-
-## 🖥 환경 정보
-
-- Spring Boot:
-- JDK:
-- DB:
-- OS:
 
 ## 📸 에러 로그 or 캡처 (선택)
 
