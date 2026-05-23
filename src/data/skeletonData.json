@@ -1,0 +1,57 @@
+{
+  "persons": [
+    {
+      "id": 2,
+      "keypoints": [
+        { "name": "nose", "x": 298.2, "y": 153.6 },
+        { "name": "left_eye", "x": 292.6, "y": 143.4 },
+        { "name": "right_eye", "x": 303.2, "y": 144.5 },
+
+        { "name": "left_shoulder", "x": 267.8, "y": 182.4 },
+        { "name": "right_shoulder", "x": 328.6, "y": 181.0 },
+
+        { "name": "left_elbow", "x": 252.0, "y": 215.8 },
+        { "name": "right_elbow", "x": 344.8, "y": 217.8 },
+
+        { "name": "left_wrist", "x": 250.7, "y": 249.9 },
+        { "name": "right_wrist", "x": 347.2, "y": 253.0 },
+
+        { "name": "left_hip", "x": 276.6, "y": 253.2 },
+        { "name": "right_hip", "x": 320.8, "y": 254.1 },
+
+        { "name": "left_knee", "x": 278.9, "y": 302.6 },
+        { "name": "right_knee", "x": 318.6, "y": 300.2 },
+
+        { "name": "left_ankle", "x": 272.6, "y": 352.3 },
+        { "name": "right_ankle", "x": 324.1, "y": 351.7 }
+      ]
+    },
+
+    {
+      "id": 28,
+      "keypoints": [
+        { "name": "nose", "x": 296.5, "y": 153.6 },
+        { "name": "left_eye", "x": 290.9, "y": 143.4 },
+        { "name": "right_eye", "x": 301.5, "y": 144.5 },
+
+        { "name": "left_shoulder", "x": 267.1, "y": 182.9 },
+        { "name": "right_shoulder", "x": 326.1, "y": 181.5 },
+
+        { "name": "left_elbow", "x": 250.3, "y": 214.1 },
+        { "name": "right_elbow", "x": 343.2, "y": 219.5 },
+
+        { "name": "left_wrist", "x": 249.1, "y": 248.1 },
+        { "name": "right_wrist", "x": 345.5, "y": 254.8 },
+
+        { "name": "left_hip", "x": 275.8, "y": 252.7 },
+        { "name": "right_hip", "x": 318.3, "y": 253.5 },
+
+        { "name": "left_knee", "x": 277.3, "y": 304.8 },
+        { "name": "right_knee", "x": 316.9, "y": 298.0 },
+
+        { "name": "left_ankle", "x": 270.9, "y": 354.4 },
+        { "name": "right_ankle", "x": 322.5, "y": 349.6 }
+      ]
+    }
+  ]
+}
