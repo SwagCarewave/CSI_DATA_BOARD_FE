@@ -1,6 +1,5 @@
-import Header from "../components/Header";
-import Sidebar from "../components/Sidebar";
 
+import MainLayout from "../Layouts/MainLayout";
 import TopStatusCards from "../components/monitoring/TopStatusCards";
 import SkeletonCard from "../components/monitoring/SkeletonCard";
 import CsiGraphCard from "../components/monitoring/CsiGraphCard";
@@ -10,23 +9,15 @@ import * as S from "../styles/monitoring/MonitoringPage";
 
 export default function MonitoringPage() {
   return (
-    <S.PageWrapper>
-      <Sidebar />
+    <MainLayout>
+      <TopStatusCards />
 
-      <S.MainArea>
-        <Header />
+      <S.MiddleSection>
+        <SkeletonCard />
+        <CsiGraphCard />
+      </S.MiddleSection>
 
-        <S.Content>
-          <TopStatusCards />
-
-          <S.MiddleSection>
-            <SkeletonCard />
-            <CsiGraphCard />
-          </S.MiddleSection>
-
-        <BottomStatusCard />
-        </S.Content>
-      </S.MainArea>
-    </S.PageWrapper>
+      <BottomStatusCard />
+    </MainLayout>
   );
 }

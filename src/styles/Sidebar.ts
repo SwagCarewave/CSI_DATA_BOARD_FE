@@ -1,13 +1,14 @@
 import styled from "styled-components";
 
 export const SidebarContainer = styled.aside`
-  width: 220px;
-  min-width: 220px;
-  min-height: 100vh;
-  padding: 34px 16px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
 
-  flex-shrink: 0;
-  align-self: stretch;
+  width: 220px;
+  height: 100vh;
+  padding: 34px 16px;
 
   display: flex;
   flex-direction: column;

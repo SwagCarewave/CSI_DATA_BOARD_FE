@@ -3,9 +3,11 @@
 import styled from "styled-components";
 
 export const Container = styled.section`
-  display: grid;
-  grid-template-columns: 1fr 1.25fr;
+  width: 100%;
+  min-width: 1156px;
 
+  display: grid;
+  grid-template-columns: 570px 570px;
   gap: 16px;
 `;
 
