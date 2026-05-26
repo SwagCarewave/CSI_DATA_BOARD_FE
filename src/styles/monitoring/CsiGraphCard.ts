@@ -1,13 +1,14 @@
-// src/styles/monitoring/CsiGraphCard.ts
-
 import styled from "styled-components";
 
 export const Card = styled.section`
+  width: 520px;
   height: 360px;
   padding: 16px;
 
+  flex-shrink: 0;
+
   display: grid;
-  grid-template-columns: 1fr 110px;
+  grid-template-columns: 364px 110px;
   gap: 14px;
 
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -15,18 +16,23 @@ export const Card = styled.section`
   background-color: ${({ theme }) => theme.colors.white};
 `;
 
-export const GraphArea = styled.div``;
+export const GraphArea = styled.div`
+  width: 364px;
+  min-width: 0;
+`;
 
 export const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
 `;
 
 export const Title = styled.span`
   color: ${({ theme }) => theme.colors.DeepBlue};
   font-size: 16px;
   font-weight: 800;
+  white-space: nowrap;
 `;
 
 export const SubTitle = styled.span`
@@ -35,18 +41,38 @@ export const SubTitle = styled.span`
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
 `;
-
-export const SelectButton = styled.button`
+export const SelectBox = styled.select`
+  width: 108px;
   height: 32px;
-  padding: 0 12px;
+  padding: 0 10px;
+
+  flex-shrink: 0;
 
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
 
+  background-color: ${({ theme }) => theme.colors.white};
+
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 11px;
   font-weight: 600;
+
+  white-space: nowrap;
+
+  outline: none;
+  cursor: pointer;
+
+  appearance: none;
+
+  background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+
+  &:focus {
+    border-color: ${({ theme }) => theme.colors.DeepBlue};
+  }
 `;
 
 export const Legend = styled.div`
@@ -54,17 +80,20 @@ export const Legend = styled.div`
 
   display: flex;
   justify-content: center;
-  gap: 18px;
+  gap: 10px;
 
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
+
+  white-space: nowrap;
 `;
 
 export const GraphPlaceholder = styled.div`
   position: relative;
 
   margin-top: 18px;
+  width: 364px;
   height: 250px;
 
   border-left: 1px solid ${({ theme }) => theme.colors.border};
@@ -76,6 +105,8 @@ export const GraphPlaceholder = styled.div`
     transparent 1px
   );
   background-size: 100% 42px;
+
+  overflow: hidden;
 `;
 
 const FakeLine = styled.div`
@@ -117,6 +148,8 @@ export const LineFour = styled(FakeLine)`
 `;
 
 export const BioSignalBox = styled.aside`
+  width: 110px;
+
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -126,6 +159,7 @@ export const BioTitle = styled.h4`
   color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
 
   span {
     color: ${({ theme }) => theme.colors.textSecondary};
@@ -134,6 +168,7 @@ export const BioTitle = styled.h4`
 `;
 
 export const BioCard = styled.div`
+  width: 110px;
   height: 90px;
   padding: 14px 12px;
 
@@ -145,6 +180,7 @@ export const BioLabel = styled.p`
   color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 `;
 
 export const BioValue = styled.p`
@@ -153,6 +189,8 @@ export const BioValue = styled.p`
   color: ${({ theme }) => theme.colors.DeepBlue};
   font-size: 36px;
   font-weight: 800;
+
+  white-space: nowrap;
 
   span {
     font-size: 12px;

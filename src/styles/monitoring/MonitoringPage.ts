@@ -1,5 +1,4 @@
 // src/styles/monitoring/MonitoringPage.ts
-
 import styled from "styled-components";
 
 export const PageWrapper = styled.div`
@@ -8,12 +7,14 @@ export const PageWrapper = styled.div`
 
   display: flex;
 
+  overflow-x: auto;
+
   background-color: ${({ theme }) => theme.colors.background};
 `;
 
 export const MainArea = styled.main`
   flex: 1;
-  min-width: 0;
+  min-width: 1180px;
 
   display: flex;
   flex-direction: column;
@@ -30,6 +31,8 @@ export const Content = styled.div`
 
 export const MiddleSection = styled.section`
   display: grid;
-  grid-template-columns: 1fr 1.7fr;
+  grid-template-columns: 620px 520px;
   gap: 16px;
+
+  align-items: stretch;
 `;

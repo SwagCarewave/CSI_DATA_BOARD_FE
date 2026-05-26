@@ -1,36 +1,50 @@
-// src/components/monitoring/TopStatusCards.tsx
+import { useState } from "react";
 
 import * as S from "../../styles/monitoring/TopStatusCards";
 
+import normalIcon from "../../assets/monitoring/nomal.svg";
+import peopleIcon from "../../assets/monitoring/people.svg";
+import graphIcon from "../../assets/monitoring/graph.svg";
+import wifiIcon from "../../assets/monitoring/wifi.svg";
+
 export default function TopStatusCards() {
+  const [selectedRoom, setSelectedRoom] = useState("101");
+
   return (
     <S.Container>
       <S.RoomSelectWrapper>
         <S.SelectLabel>방 선택</S.SelectLabel>
 
-        <S.SelectBox>
-          101호
-          <span>⌄</span>
+        <S.SelectBox
+          value={selectedRoom}
+          onChange={(e) => setSelectedRoom(e.target.value)}
+        >
+          <option value="101">101호</option>
+          <option value="102">102호</option>
+          <option value="103">103호</option>
+          <option value="104">104호</option>
         </S.SelectBox>
       </S.RoomSelectWrapper>
 
       <S.CardGrid>
         <S.Card>
-          <S.IconCircle />
+          <S.IconCircle>
+            <img src={normalIcon} alt="정상 아이콘" />
+          </S.IconCircle>
 
           <div>
             <S.GreenTitle>정상</S.GreenTitle>
 
-            <S.Description>
-              이상 징후가 감지되지 않았습니다.
-            </S.Description>
+            <S.Description>이상 징후가 감지되지 않았습니다.</S.Description>
 
             <S.SmallStatus>● 정상</S.SmallStatus>
           </div>
         </S.Card>
 
         <S.Card>
-          <S.IconCircle />
+          <S.IconCircle>
+            <img src={peopleIcon} alt="재실 아이콘" />
+          </S.IconCircle>
 
           <div>
             <S.Title>재실</S.Title>
@@ -42,7 +56,9 @@ export default function TopStatusCards() {
         </S.Card>
 
         <S.Card>
-          <S.IconCircle />
+          <S.IconCircle $active>
+            <img src={graphIcon} alt="그래프 아이콘" />
+          </S.IconCircle>
 
           <div>
             <S.Title>21 pkt/s</S.Title>
@@ -54,14 +70,14 @@ export default function TopStatusCards() {
         </S.Card>
 
         <S.Card>
-          <S.IconCircle />
+          <S.IconCircle>
+            <img src={wifiIcon} alt="와이파이 아이콘" />
+          </S.IconCircle>
 
           <div>
             <S.Title>연결 양호</S.Title>
 
-            <S.Description>
-              센서 연결이 안정적입니다.
-            </S.Description>
+            <S.Description>센서 연결이 안정적입니다.</S.Description>
           </div>
         </S.Card>
       </S.CardGrid>

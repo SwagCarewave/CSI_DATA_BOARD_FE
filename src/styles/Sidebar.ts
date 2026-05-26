@@ -1,12 +1,19 @@
 import styled from "styled-components";
 
 export const SidebarContainer = styled.aside`
-  width: 180px;
+  width: 220px;
+  min-width: 220px;
   min-height: 100vh;
   padding: 34px 16px;
 
+  flex-shrink: 0;
+  align-self: stretch;
+
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+
+  overflow-y: auto;
 
   background-color: ${({ theme }) => theme.colors.sidebarBackground};
   border-right: 1px solid ${({ theme }) => theme.colors.border};
@@ -69,29 +76,23 @@ export const MenuText = styled.span`
   font-weight: 700;
   white-space: nowrap;
 `;
-
 export const ConnectionBox = styled.div`
-  margin-top: auto;
-
   width: 100%;
   height: 162px;
   padding: 24px 18px;
 
+  flex-shrink: 0;
+
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
 
-  // src/styles/Sidebar.ts
-
   background-color: ${({ theme }) => theme.colors.sidebarBackground};
 `;
+export const ConnectionIcon = styled.img`
+  height: 50px;
 
-export const ConnectionIcon = styled.div`
-  color: ${({ theme }) => theme.colors.DeepBlue};
-
-  font-size: 22px;
-  font-weight: 700;
+  object-fit: contain;
 `;
-
 export const ConnectionLabel = styled.p`
   margin-top: 12px;
 

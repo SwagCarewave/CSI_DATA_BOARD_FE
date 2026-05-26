@@ -4,6 +4,7 @@ import styled from "styled-components";
 
 export const HeaderContainer = styled.header`
   width: 100%;
+  min-width: 1180px;
   height: 110px;
 
   padding: 0 32px;
@@ -11,6 +12,7 @@ export const HeaderContainer = styled.header`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 24px;
 
   background-color: #ffffff;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
@@ -20,6 +22,8 @@ export const TitleArea = styled.div`
   display: flex;
   align-items: center;
   gap: 20px;
+
+  flex-shrink: 0;
 `;
 
 export const PageNumber = styled.h1`
@@ -50,15 +54,16 @@ export const PageDescription = styled.p`
   font-size: 13px;
   font-weight: 500;
 `;
-
 export const RightArea = styled.div`
   display: flex;
   align-items: center;
-
   gap: 14px;
+
+  flex-shrink: 0;
 `;
 
 export const DateTimeBox = styled.div`
+  width: 170px;
   padding-right: 28px;
 
   border-right: 1px solid ${({ theme }) => theme.colors.border};
@@ -78,25 +83,31 @@ export const TimeText = styled.p`
 
   font-size: 32px;
   font-weight: 800;
-`;
 
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+
+  width: 142px;
+  text-align: left;
+`;
 export const SystemStatusBox = styled.div`
-  width: 180px;
+  width: 195px;
   height: 88px;
 
-  padding: 14px 18px;
+  padding: 14px 16px;
 
   display: flex;
   flex-direction: column;
 
-  gap: 7px;
+  gap: 5px;
+
+  flex-shrink: 0;
 
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 10px;
 
   background-color: ${({ theme }) => theme.colors.white};
 `;
-
 export const StatusTitle = styled.p`
   color: ${({ theme }) => theme.colors.textPrimary};
 
@@ -106,16 +117,18 @@ export const StatusTitle = styled.p`
 
 export const StatusRow = styled.div`
   display: grid;
-  grid-template-columns: 75px 8px 1fr;
+  grid-template-columns: 78px 8px auto;
 
   align-items: center;
 
-  gap: 8px;
+  gap: 6px;
 
   color: ${({ theme }) => theme.colors.textPrimary};
 
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
+
+  white-space: nowrap;
 `;
 
 export const StatusDot = styled.div`
@@ -144,15 +157,14 @@ export const ProfileBox = styled.div`
   background-color: ${({ theme }) => theme.colors.white};
 `;
 
-export const ProfileImage = styled.div`
+export const ProfileImage = styled.img`
   width: 54px;
   height: 54px;
 
   border-radius: 50%;
 
-  background-color: #d9d9d9;
+  object-fit: cover;
 `;
-
 export const ProfileInfo = styled.div`
   display: flex;
   flex-direction: column;

@@ -1,8 +1,10 @@
-// src/components/monitoring/CsiGraphCard.tsx
+import { useState } from "react";
 
 import * as S from "../../styles/monitoring/CsiGraphCard";
 
 export default function CsiGraphCard() {
+  const [sampleCount, setSampleCount] = useState("100");
+
   return (
     <S.Card>
       <S.GraphArea>
@@ -12,7 +14,15 @@ export default function CsiGraphCard() {
             <S.SubTitle>(Subcarrier Amplitude)</S.SubTitle>
           </div>
 
-          <S.SelectButton>최근 100샘플⌄</S.SelectButton>
+          <S.SelectBox
+            value={sampleCount}
+            onChange={(e) => setSampleCount(e.target.value)}
+          >
+            <option value="50">최근 50샘플</option>
+            <option value="100">최근 100샘플</option>
+            <option value="200">최근 200샘플</option>
+            <option value="500">최근 500샘플</option>
+          </S.SelectBox>
         </S.Header>
 
         <S.Legend>
@@ -31,16 +41,22 @@ export default function CsiGraphCard() {
       </S.GraphArea>
 
       <S.BioSignalBox>
-        <S.BioTitle>생체신호 <span>(보조 지표)</span></S.BioTitle>
+        <S.BioTitle>
+          생체신호 <span>(보조 지표)</span>
+        </S.BioTitle>
 
         <S.BioCard>
           <S.BioLabel>호흡수</S.BioLabel>
-          <S.BioValue>16 <span>회/분</span></S.BioValue>
+          <S.BioValue>
+            16 <span>회/분</span>
+          </S.BioValue>
         </S.BioCard>
 
         <S.BioCard>
           <S.BioLabel>심박수</S.BioLabel>
-          <S.BioValue>72 <span>BPM</span></S.BioValue>
+          <S.BioValue>
+            72 <span>BPM</span>
+          </S.BioValue>
         </S.BioCard>
 
         <S.Note>
