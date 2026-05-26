@@ -5,30 +5,23 @@ export const PageWrapper = styled.div`
   width: 100%;
   min-height: 100vh;
 
-  display: flex;
-
-  overflow-x: auto;
-
   background-color: ${({ theme }) => theme.colors.background};
 `;
 
 export const MainArea = styled.main`
-  flex: 1;
-  min-width: 1180px;
-
-  display: flex;
-  flex-direction: column;
+  width: calc(100% - 220px);
+  min-height: 100vh;
+  margin-left: 220px;
 `;
 
 export const Content = styled.div`
-  flex: 1;
-  padding: 24px;
+  padding: 24px 32px;
 
   display: flex;
   flex-direction: column;
-  gap: 16px;
-`;
 
+  gap: 10px;
+`;
 export const MiddleSection = styled.section`
   display: grid;
   grid-template-columns: 620px 520px;
