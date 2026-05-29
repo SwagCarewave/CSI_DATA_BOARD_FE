@@ -56,6 +56,7 @@ export const MenuItem = styled.button<{ $active?: boolean }>`
   align-items: center;
   gap: 10px;
 
+  border: none;
   border-radius: 6px;
 
   background-color: ${({ $active, theme }) =>
