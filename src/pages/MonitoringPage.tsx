@@ -1,5 +1,3 @@
-
-import MainLayout from "../Layouts/MainLayout";
 import TopStatusCards from "../components/monitoring/TopStatusCards";
 import SkeletonCard from "../components/monitoring/SkeletonCard";
 import CsiGraphCard from "../components/monitoring/CsiGraphCard";
@@ -9,7 +7,7 @@ import * as S from "../styles/monitoring/MonitoringPage";
 
 export default function MonitoringPage() {
   return (
-    <MainLayout>
+    <>
       <TopStatusCards />
 
       <S.MiddleSection>
@@ -18,6 +16,6 @@ export default function MonitoringPage() {
       </S.MiddleSection>
 
       <BottomStatusCard />
-    </MainLayout>
+    </>
   );
 }

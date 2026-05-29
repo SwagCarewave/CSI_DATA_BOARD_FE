@@ -20,6 +20,10 @@ export const theme = {
 
     // Border
     border: "#E5E7EB",
+    danger: "#C7342C",
+    warning: "#DF7A2D",
+    caution: "#D2922F",
+    purple: "#7540A6",
   },
 
   typography: {

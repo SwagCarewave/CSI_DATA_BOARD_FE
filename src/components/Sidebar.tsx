@@ -1,7 +1,12 @@
+import { useNavigate, useLocation } from "react-router-dom";
+
 import * as S from "../styles/Sidebar";
 import signIcon from "../assets/monitoring/sign.svg";
 
 export default function Sidebar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   return (
     <S.SidebarContainer>
       <div>
@@ -11,22 +16,34 @@ export default function Sidebar() {
         </S.LogoBox>
 
         <S.MenuList>
-          <S.MenuItem $active>
+          <S.MenuItem
+            $active={location.pathname === "/"}
+            onClick={() => navigate("/")}
+          >
             <S.MenuNumber>01</S.MenuNumber>
             <S.MenuText>실시간 모니터링 페이지</S.MenuText>
           </S.MenuItem>
 
-          <S.MenuItem>
+          <S.MenuItem
+            $active={location.pathname === "/alerts"}
+            onClick={() => navigate("/alerts")}
+          >
             <S.MenuNumber>02</S.MenuNumber>
             <S.MenuText>알림 이력 페이지</S.MenuText>
           </S.MenuItem>
 
-          <S.MenuItem>
+          <S.MenuItem
+            $active={location.pathname === "/care-report"}
+            onClick={() => navigate("/care-report")}
+          >
             <S.MenuNumber>03</S.MenuNumber>
             <S.MenuText>AI 케어 리포트 페이지</S.MenuText>
           </S.MenuItem>
 
-          <S.MenuItem>
+          <S.MenuItem
+            $active={location.pathname === "/settings"}
+            onClick={() => navigate("/settings")}
+          >
             <S.MenuNumber>04</S.MenuNumber>
             <S.MenuText>설정 페이지</S.MenuText>
           </S.MenuItem>
