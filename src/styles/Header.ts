@@ -90,6 +90,21 @@ export const TimeText = styled.p`
   width: 142px;
   text-align: left;
 `;
+export const TestAlertButton = styled.button`
+  width: 100px;
+  height: 38px;
+
+  border: none;
+  border-radius: 8px;
+
+  background-color: ${({ theme }) => theme.colors.danger};
+  color: white;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  cursor: pointer;
+`;
 export const SystemStatusBox = styled.div`
   width: 195px;
   height: 88px;

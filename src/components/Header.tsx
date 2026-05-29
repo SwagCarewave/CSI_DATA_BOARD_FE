@@ -1,11 +1,33 @@
-// src/components/Header.tsx
-
+import { useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import * as S from "../styles/Header";
 
 import grandfatherImage from "../assets/monitoring/grandfather.svg";
 
-export default function Header() {
+interface HeaderProps {
+  onFallAlertTest?: () => void;
+}
+
+export default function Header({ onFallAlertTest }: HeaderProps) {
+  const location = useLocation();
+
+  const pageInfo = {
+    "/": {
+      number: "01.",
+      title: "실시간 모니터링",
+      description: "선택한 방의 상태를 실시간으로 모니터링합니다.",
+    },
+    "/alerts": {
+      number: "02.",
+      title: "알림 이력",
+      description:
+        "발생한 낙상 감지 및 이상 징후 이벤트를 조회하고 관리합니다.",
+    },
+  };
+
+  const currentPage =
+    pageInfo[location.pathname as keyof typeof pageInfo] ?? pageInfo["/"];
+
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -31,18 +53,20 @@ export default function Header() {
   return (
     <S.HeaderContainer>
       <S.TitleArea>
-        <S.PageNumber>01.</S.PageNumber>
+        <S.PageNumber>{currentPage.number}</S.PageNumber>
 
         <S.TitleTextBox>
-          <S.PageTitle>실시간 모니터링</S.PageTitle>
+          <S.PageTitle>{currentPage.title}</S.PageTitle>
 
-          <S.PageDescription>
-            선택한 방의 상태를 실시간으로 모니터링합니다.
-          </S.PageDescription>
+          <S.PageDescription>{currentPage.description}</S.PageDescription>
         </S.TitleTextBox>
       </S.TitleArea>
 
       <S.RightArea>
+        <S.TestAlertButton onClick={onFallAlertTest}>
+          낙상 테스트
+        </S.TestAlertButton>
+
         <S.DateTimeBox>
           <S.DateText>
             {year}.{month}.{date} {week}

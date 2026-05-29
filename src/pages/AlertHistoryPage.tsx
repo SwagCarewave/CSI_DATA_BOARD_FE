@@ -17,14 +17,7 @@ const events = [
     status: "미확인",
     color: "warning",
   },
-  {
-    type: "장시간 무반응",
-    description: "장시간 움직임이 감지되지 않았습니다.",
-    room: "103호",
-    time: "2025.05.21 11:12:33",
-    status: "확인 완료",
-    color: "caution",
-  },
+  
   {
     type: "이상탐지 사전경고",
     description: "평소와 다른 패턴이 감지되었습니다.",
@@ -70,7 +63,6 @@ export default function AlertHistoryPage() {
               <S.Label>이벤트 유형</S.Label>
               <S.CheckItem color="danger">낙상 감지</S.CheckItem>
               <S.CheckItem color="warning">이상 호흡</S.CheckItem>
-              <S.CheckItem color="caution">장시간 무반응</S.CheckItem>
               <S.CheckItem color="purple">이상탐지 사전경고</S.CheckItem>
             </S.FilterGroup>
 

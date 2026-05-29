@@ -4,18 +4,21 @@ type EventColor = "danger" | "warning" | "caution" | "purple" | string;
 
 export const Container = styled.div`
   width: 100%;
+  min-width: 980px;
 `;
 
 export const TopSection = styled.div`
   display: grid;
-  grid-template-columns: 190px 1fr;
+  grid-template-columns: minmax(190px, 220px) minmax(760px, 1fr);
   gap: 14px;
   margin-bottom: 14px;
 `;
 
 export const SummaryCard = styled.section`
-  height: 165px;
+  min-width: 190px;
+  min-height: 165px;
   padding: 24px;
+
   display: flex;
   align-items: center;
   gap: 20px;
@@ -57,9 +60,9 @@ export const SummaryText = styled.div`
     color: ${({ theme }) => theme.colors.textSecondary};
   }
 `;
-
 export const FilterCard = styled.section`
-  height: 165px;
+  min-width: 760px;
+  min-height: 165px;
   padding: 22px 24px;
 
   background-color: ${({ theme }) => theme.colors.white};
@@ -77,9 +80,9 @@ export const CardTitle = styled.h3`
 
 export const FilterGrid = styled.div`
   display: grid;
-  grid-template-columns: 150px 190px 130px 150px;
-  gap: 28px;
-  align-items: end;
+  grid-template-columns: 170px 210px 150px 170px;
+  gap: 34px;
+  align-items: start;
 `;
 
 export const FilterGroup = styled.div`
@@ -145,7 +148,10 @@ export const RadioItem = styled.div`
 `;
 
 export const ExportButton = styled.button`
+  width: 170px;
   height: 42px;
+  margin-top: 62px;
+
   border-radius: ${({ theme }) => theme.radius.button};
   border: 1px solid ${({ theme }) => theme.colors.border};
   background-color: ${({ theme }) => theme.colors.white};
@@ -154,14 +160,14 @@ export const ExportButton = styled.button`
   font-weight: 700;
   color: ${({ theme }) => theme.colors.DeepBlue};
 `;
-
 export const MainGrid = styled.div`
   display: grid;
-  grid-template-columns: 1fr 310px;
+  grid-template-columns: minmax(700px, 1fr) 310px;
   gap: 14px;
 `;
 
 export const TableCard = styled.section`
+  min-width: 700px;
   min-height: 430px;
   padding: 18px 20px;
 
@@ -266,6 +272,7 @@ export const Pagination = styled.div`
 `;
 
 export const DetailCard = styled.aside`
+  min-width: 310px;
   min-height: 430px;
   padding: 22px;
 
