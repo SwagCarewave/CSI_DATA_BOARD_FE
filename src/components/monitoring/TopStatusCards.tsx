@@ -1,5 +1,3 @@
-// src/components/monitoring/TopStatusCards.tsx
-
 import { useEffect, useState } from "react";
 
 import * as S from "../../styles/monitoring/TopStatusCards";
@@ -10,21 +8,22 @@ import graphIcon from "../../assets/monitoring/graph.svg";
 import wifiIcon from "../../assets/monitoring/wifi.svg";
 
 interface PresenceData {
-  is_present: boolean;
-  status: string;
+  status: "재실" | "공실" | string;
   detected_at: string;
-  hardware_connected: boolean;
 }
 
 export default function TopStatusCards() {
   const [selectedRoom, setSelectedRoom] = useState("101");
-
   const [presence, setPresence] = useState<PresenceData | null>(null);
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
 
   useEffect(() => {
     const socket = new WebSocket("ws://43.201.215.82:8000/ws/presence");
 
-    socket.onopen = () => {};
+    socket.onopen = () => {
+      setIsSocketConnected(true);
+      console.log("재실/공실 WebSocket 연결 성공");
+    };
 
     socket.onmessage = (event) => {
       try {
@@ -36,11 +35,13 @@ export default function TopStatusCards() {
     };
 
     socket.onerror = (error) => {
-      console.error("재실 여부 WebSocket 오류:", error);
+      setIsSocketConnected(false);
+      console.error("재실/공실 WebSocket 오류:", error);
     };
 
     socket.onclose = () => {
-      console.log("재실 여부 WebSocket 연결 종료");
+      setIsSocketConnected(false);
+      console.log("재실/공실 WebSocket 연결 종료");
     };
 
     return () => {
@@ -62,7 +63,7 @@ export default function TopStatusCards() {
     return `${month}.${day} ${hour}:${minute}:${second}`;
   };
 
-  const isHardwareOff = presence?.hardware_connected === false;
+  const presenceStatus = presence?.status ?? "수신 대기";
 
   return (
     <S.Container>
@@ -99,21 +100,9 @@ export default function TopStatusCards() {
           </S.IconCircle>
 
           <div>
-            <S.Title>
-              {isHardwareOff
-                ? "전원 꺼짐"
-                : presence?.is_present
-                ? "재실"
-                : "공실"}
-            </S.Title>
-
-            <S.Description>
-              {isHardwareOff ? "하드웨어 전원이 꺼져 있습니다." : "감지 시각"}
-            </S.Description>
-
-            <S.TimeText>
-              {isHardwareOff ? "-" : formatDetectedTime(presence?.detected_at)}
-            </S.TimeText>
+            <S.Title>{presenceStatus}</S.Title>
+            <S.Description>감지 시각</S.Description>
+            <S.TimeText>{formatDetectedTime(presence?.detected_at)}</S.TimeText>
           </div>
         </S.Card>
 
@@ -135,11 +124,11 @@ export default function TopStatusCards() {
           </S.IconCircle>
 
           <div>
-            <S.Title>{isHardwareOff ? "연결 끊김" : "연결 양호"}</S.Title>
+            <S.Title>{isSocketConnected ? "연결 양호" : "연결 대기"}</S.Title>
             <S.Description>
-              {isHardwareOff
-                ? "하드웨어 전원이 꺼져 있습니다."
-                : "센서 연결이 안정적입니다."}
+              {isSocketConnected
+                ? "센서 연결이 안정적입니다."
+                : "WebSocket 연결을 기다리는 중입니다."}
             </S.Description>
           </div>
         </S.Card>

@@ -28,7 +28,7 @@ export const SummaryCard = styled.section`
   border-radius: ${({ theme }) => theme.radius.card};
   box-shadow: ${({ theme }) => theme.shadow.card};
 `;
-
+/*
 export const EmptyIconCircle = styled.div`
   width: 58px;
   height: 58px;
@@ -36,7 +36,7 @@ export const EmptyIconCircle = styled.div`
   flex-shrink: 0;
   background-color: #f1eeee;
 `;
-
+*/
 export const SummaryText = styled.div`
   display: flex;
   flex-direction: column;
@@ -152,13 +152,24 @@ export const ExportButton = styled.button`
   height: 42px;
   margin-top: 62px;
 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
   border-radius: ${({ theme }) => theme.radius.button};
   border: 1px solid ${({ theme }) => theme.colors.border};
+
   background-color: ${({ theme }) => theme.colors.white};
 
   font-size: 13px;
   font-weight: 700;
   color: ${({ theme }) => theme.colors.DeepBlue};
+
+  img {
+    width: 16px;
+    height: 16px;
+  }
 `;
 export const MainGrid = styled.div`
   display: grid;
@@ -224,9 +235,22 @@ export const EventInfo = styled.div`
 export const EventIcon = styled.div<{ color: EventColor }>`
   width: 42px;
   height: 42px;
+
   border-radius: 10px;
+
   flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   background-color: ${({ theme, color }) => theme.colors[color]};
+
+  img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+  }
 `;
 
 export const StatusBadge = styled.span<{ $active: boolean }>`
@@ -270,7 +294,24 @@ export const Pagination = styled.div`
     color: white;
   }
 `;
+export const EmptyIconCircle = styled.div`
+  width: 58px;
+  height: 58px;
 
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background-color: #f8eeee;
+
+  img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+`;
 export const DetailCard = styled.aside`
   min-width: 310px;
   min-height: 430px;

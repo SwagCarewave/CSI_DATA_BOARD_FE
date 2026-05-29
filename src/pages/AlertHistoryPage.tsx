@@ -1,5 +1,9 @@
 import * as S from "../styles/AlertHistoryPage";
-
+import realAlertIcon from "../assets/Alert/RedAlert.svg";
+import fallIcon from "../assets/Alert/Fall.svg";
+import breathIcon from "../assets/Alert/breath.svg";
+import warningIcon from "../assets/Alert/alertwhite.svg";
+import downloadIcon from "../assets/Alert/download.svg";
 const events = [
   {
     type: "낙상 감지",
@@ -8,6 +12,7 @@ const events = [
     time: "2025.05.21 14:28:15",
     status: "미확인",
     color: "danger",
+    icon: fallIcon,
   },
   {
     type: "이상 호흡",
@@ -16,8 +21,8 @@ const events = [
     time: "2025.05.21 13:47:09",
     status: "미확인",
     color: "warning",
+    icon: breathIcon,
   },
-  
   {
     type: "이상탐지 사전경고",
     description: "평소와 다른 패턴이 감지되었습니다.",
@@ -25,6 +30,7 @@ const events = [
     time: "2025.05.20 23:05:41",
     status: "확인 완료",
     color: "purple",
+    icon: warningIcon,
   },
   {
     type: "낙상 감지",
@@ -33,6 +39,7 @@ const events = [
     time: "2025.05.20 21:18:02",
     status: "미확인",
     color: "danger",
+    icon: fallIcon,
   },
 ];
 
@@ -41,7 +48,9 @@ export default function AlertHistoryPage() {
     <S.Container>
       <S.TopSection>
         <S.SummaryCard>
-          <S.EmptyIconCircle />
+          <S.EmptyIconCircle>
+            <img src={realAlertIcon} alt="알림" />
+          </S.EmptyIconCircle>
           <S.SummaryText>
             <span>미확인 이벤트</span>
             <strong>3</strong>
@@ -58,22 +67,22 @@ export default function AlertHistoryPage() {
               <S.DateInput>2025.05.14</S.DateInput>
               <S.DateInput>2025.05.21</S.DateInput>
             </S.FilterGroup>
-
             <S.FilterGroup>
               <S.Label>이벤트 유형</S.Label>
               <S.CheckItem color="danger">낙상 감지</S.CheckItem>
               <S.CheckItem color="warning">이상 호흡</S.CheckItem>
               <S.CheckItem color="purple">이상탐지 사전경고</S.CheckItem>
             </S.FilterGroup>
-
             <S.FilterGroup>
               <S.Label>확인 상태</S.Label>
               <S.RadioItem>전체</S.RadioItem>
               <S.RadioItem>미확인</S.RadioItem>
               <S.RadioItem>확인 완료</S.RadioItem>
             </S.FilterGroup>
-
-            <S.ExportButton>CSV 내보내기</S.ExportButton>
+            <S.ExportButton>
+              <img src={downloadIcon} alt="다운로드" />
+              CSV 내보내기
+            </S.ExportButton>{" "}
           </S.FilterGrid>
         </S.FilterCard>
       </S.TopSection>
@@ -98,7 +107,9 @@ export default function AlertHistoryPage() {
                 <tr key={index}>
                   <td>
                     <S.EventInfo>
-                      <S.EventIcon color={event.color} />
+                      <S.EventIcon color={event.color}>
+                        <img src={event.icon} alt={event.type} />
+                      </S.EventIcon>{" "}
                       <div>
                         <strong>{event.type}</strong>
                         <p>{event.description}</p>
@@ -136,7 +147,9 @@ export default function AlertHistoryPage() {
           </S.DetailHeader>
 
           <S.DetailTitle>
-            <S.EventIcon color="danger" />
+            <S.EventIcon color="danger">
+              <img src={fallIcon} alt="낙상 감지" />
+            </S.EventIcon>{" "}
             <strong>낙상 감지</strong>
             <S.DetailStatus>미확인</S.DetailStatus>
           </S.DetailTitle>
