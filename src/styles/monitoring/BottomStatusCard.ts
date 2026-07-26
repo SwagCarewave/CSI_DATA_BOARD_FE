@@ -4,20 +4,25 @@ import styled from "styled-components";
 
 export const Container = styled.section`
   width: 100%;
-  min-width: 1156px;
+  min-width: 0;
 
   display: grid;
-  grid-template-columns: 570px 570px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+
+  @media (max-width: 750px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 export const EventCard = styled.div`
-  height: 120px;
+  width: 100%;
+  min-width: 0;
+  min-height: 120px;
   padding: 18px;
 
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 14px;
-
   background-color: ${({ theme }) => theme.colors.white};
 `;
 
@@ -29,25 +34,27 @@ export const Title = styled.h3`
 `;
 
 export const EventBox = styled.div`
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
   margin-top: 18px;
-
-  height: 44px;
-  padding: 0 14px;
+  padding: 10px 14px;
 
   display: flex;
   align-items: center;
 
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 10px;
-
   background-color: ${({ theme }) => theme.colors.white};
 `;
 
 export const EventLeft = styled.div`
+  min-width: 0;
+
   display: flex;
   align-items: center;
-
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
 `;
 
 export const EventTime = styled.span`
@@ -55,13 +62,15 @@ export const EventTime = styled.span`
 
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
 `;
 
 export const StatusBadge = styled.div`
   padding: 4px 10px;
 
-  border-radius: 6px;
+  flex-shrink: 0;
 
+  border-radius: 6px;
   background-color: ${({ theme }) => theme.colors.successLight};
 
   color: ${({ theme }) => theme.colors.success};
@@ -71,6 +80,8 @@ export const StatusBadge = styled.div`
 `;
 
 export const EventText = styled.p`
+  min-width: 0;
+
   color: ${({ theme }) => theme.colors.textSecondary};
 
   font-size: 13px;
@@ -78,7 +89,10 @@ export const EventText = styled.p`
 `;
 
 export const AlertCard = styled.div`
-  height: 120px;
+  width: 100%;
+  min-width: 0;
+  min-height: 120px;
+  padding: 18px;
 
   display: flex;
   flex-direction: column;
@@ -87,8 +101,9 @@ export const AlertCard = styled.div`
 
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 14px;
-
   background-color: ${({ theme }) => theme.colors.white};
+
+  text-align: center;
 `;
 
 export const AlertIcon = styled.div`
@@ -111,4 +126,5 @@ export const AlertDescription = styled.p`
 
   font-size: 12px;
   font-weight: 500;
+  line-height: 1.5;
 `;

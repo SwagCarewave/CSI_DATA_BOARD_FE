@@ -1,7 +1,6 @@
-// src/layouts/MainLayout.tsx
-
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+
 import * as S from "../styles/monitoring/MonitoringPage";
 
 interface MainLayoutProps {
@@ -15,6 +14,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       <S.MainArea>
         <Header />
+
         <S.Content>{children}</S.Content>
       </S.MainArea>
     </S.PageWrapper>

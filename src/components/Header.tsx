@@ -1,11 +1,29 @@
-// src/components/Header.tsx
-
+import { useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import * as S from "../styles/Header";
 
 import grandfatherImage from "../assets/monitoring/grandfather.svg";
 
 export default function Header() {
+  const location = useLocation();
+
+  const pageInfo = {
+    "/": {
+      number: "01.",
+      title: "실시간 모니터링",
+      description: "선택한 방의 상태를 실시간으로 모니터링합니다.",
+    },
+    "/alerts": {
+      number: "02.",
+      title: "알림 이력",
+      description:
+        "발생한 낙상 감지 및 이상 징후 이벤트를 조회하고 관리합니다.",
+    },
+  };
+
+  const currentPage =
+    pageInfo[location.pathname as keyof typeof pageInfo] ?? pageInfo["/"];
+
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -21,7 +39,6 @@ export default function Header() {
   const year = currentTime.getFullYear();
   const month = String(currentTime.getMonth() + 1).padStart(2, "0");
   const date = String(currentTime.getDate()).padStart(2, "0");
-
   const week = weekList[currentTime.getDay()];
 
   const hours = String(currentTime.getHours()).padStart(2, "0");
@@ -31,14 +48,11 @@ export default function Header() {
   return (
     <S.HeaderContainer>
       <S.TitleArea>
-        <S.PageNumber>01.</S.PageNumber>
+        <S.PageNumber>{currentPage.number}</S.PageNumber>
 
         <S.TitleTextBox>
-          <S.PageTitle>실시간 모니터링</S.PageTitle>
-
-          <S.PageDescription>
-            선택한 방의 상태를 실시간으로 모니터링합니다.
-          </S.PageDescription>
+          <S.PageTitle>{currentPage.title}</S.PageTitle>
+          <S.PageDescription>{currentPage.description}</S.PageDescription>
         </S.TitleTextBox>
       </S.TitleArea>
 
@@ -81,7 +95,6 @@ export default function Header() {
           <S.ProfileInfo>
             <S.ProfileName>홍길동 보호자</S.ProfileName>
             <S.ProfileRole>보호자 계정</S.ProfileRole>
-
             <S.LogoutButton>LOGOUT</S.LogoutButton>
           </S.ProfileInfo>
         </S.ProfileBox>
