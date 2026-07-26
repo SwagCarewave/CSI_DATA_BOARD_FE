@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+// src/components/monitoring/TopStatusCards.tsx
+
+import { useEffect, useRef, useState } from "react";
 
 import * as S from "../../styles/monitoring/TopStatusCards";
 
@@ -9,6 +11,8 @@ import wifiIcon from "../../assets/monitoring/wifi.svg";
 
 interface PresenceData {
   status: "재실" | "공실" | string;
+  confidence: number;
+  rx: "RX1" | "RX2" | "RX3" | string;
   detected_at: string;
 }
 
@@ -17,35 +21,75 @@ export default function TopStatusCards() {
   const [presence, setPresence] = useState<PresenceData | null>(null);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
 
+  const hasLoggedMessage = useRef(false);
+
   useEffect(() => {
-    const socket = new WebSocket("ws://43.201.215.82:8000/ws/presence");
+    console.log("🔥 TopStatusCards useEffect 실행됨");
+    let socket: WebSocket | null = null;
+    let reconnectTimer: number | null = null;
+    let isUnmounted = false;
 
-    socket.onopen = () => {
-      setIsSocketConnected(true);
-      console.log("재실/공실 WebSocket 연결 성공");
+    const connectWebSocket = () => {
+      if (isUnmounted) return;
+
+      const socketUrl =
+        window.location.protocol === "https:"
+          ? "wss://43.201.215.82:8000/ws/presence"
+          : "ws://43.201.215.82:8000/ws/presence";
+
+      socket = new WebSocket(socketUrl);
+
+      socket.onopen = () => {
+        setIsSocketConnected(true);
+        console.log("✅ 재실/공실 WebSocket 연결 성공");
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const data: PresenceData = JSON.parse(event.data);
+
+          if (!hasLoggedMessage.current) {
+            console.log("✅ 재실/공실 데이터 수신 성공:", data);
+            hasLoggedMessage.current = true;
+          }
+
+          setPresence(data);
+        } catch (error) {
+          console.error("❌ 재실/공실 데이터 파싱 오류:", error);
+        }
+      };
+
+      socket.onerror = (error) => {
+        console.error("❌ 재실/공실 WebSocket 오류:", error);
+      };
+
+      socket.onclose = (event) => {
+        setIsSocketConnected(false);
+        console.log(
+          `🔌 재실/공실 WebSocket 연결 종료 code=${event.code}, reason=${event.reason}`
+        );
+
+        if (!isUnmounted) {
+          reconnectTimer = window.setTimeout(() => {
+            console.log("🔄 재실/공실 WebSocket 재연결 시도...");
+            connectWebSocket();
+          }, 3000);
+        }
+      };
     };
 
-    socket.onmessage = (event) => {
-      try {
-        const data: PresenceData = JSON.parse(event.data);
-        setPresence(data);
-      } catch (error) {
-        console.error("WebSocket 데이터 파싱 오류:", error);
-      }
-    };
-
-    socket.onerror = (error) => {
-      setIsSocketConnected(false);
-      console.error("재실/공실 WebSocket 오류:", error);
-    };
-
-    socket.onclose = () => {
-      setIsSocketConnected(false);
-      console.log("재실/공실 WebSocket 연결 종료");
-    };
+    connectWebSocket();
 
     return () => {
-      socket.close();
+      isUnmounted = true;
+
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+
+      if (socket) {
+        socket.close();
+      }
     };
   }, []);
 
@@ -64,6 +108,11 @@ export default function TopStatusCards() {
   };
 
   const presenceStatus = presence?.status ?? "수신 대기";
+
+  const confidenceText =
+    presence?.confidence !== undefined
+      ? `신뢰도 ${Math.round(presence.confidence * 100)}%`
+      : "신뢰도 -";
 
   return (
     <S.Container>
@@ -101,7 +150,13 @@ export default function TopStatusCards() {
 
           <div>
             <S.Title>{presenceStatus}</S.Title>
-            <S.Description>감지 시각</S.Description>
+
+            <S.Description>
+              {presence?.rx
+                ? `${presence.rx} · ${confidenceText}`
+                : "감지 대기 중"}
+            </S.Description>
+
             <S.TimeText>{formatDetectedTime(presence?.detected_at)}</S.TimeText>
           </div>
         </S.Card>
@@ -112,9 +167,9 @@ export default function TopStatusCards() {
           </S.IconCircle>
 
           <div>
-            <S.Title>21 pkt/s</S.Title>
-            <S.Description>마지막 수신 14:32:18</S.Description>
-            <S.Tag>정상 (15~25 pkt/s)</S.Tag>
+            <S.Title>윈도우 단위</S.Title>
+            <S.Description>25프레임마다 예측</S.Description>
+            <S.Tag>약 1~3초 간격 업데이트</S.Tag>
           </div>
         </S.Card>
 
@@ -125,9 +180,10 @@ export default function TopStatusCards() {
 
           <div>
             <S.Title>{isSocketConnected ? "연결 양호" : "연결 대기"}</S.Title>
+
             <S.Description>
               {isSocketConnected
-                ? "센서 연결이 안정적입니다."
+                ? "WebSocket 연결이 안정적입니다."
                 : "WebSocket 연결을 기다리는 중입니다."}
             </S.Description>
           </div>

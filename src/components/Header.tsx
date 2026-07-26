@@ -4,11 +4,7 @@ import * as S from "../styles/Header";
 
 import grandfatherImage from "../assets/monitoring/grandfather.svg";
 
-interface HeaderProps {
-  onFallAlertTest?: () => void;
-}
-
-export default function Header({ onFallAlertTest }: HeaderProps) {
+export default function Header() {
   const location = useLocation();
 
   const pageInfo = {
@@ -43,7 +39,6 @@ export default function Header({ onFallAlertTest }: HeaderProps) {
   const year = currentTime.getFullYear();
   const month = String(currentTime.getMonth() + 1).padStart(2, "0");
   const date = String(currentTime.getDate()).padStart(2, "0");
-
   const week = weekList[currentTime.getDay()];
 
   const hours = String(currentTime.getHours()).padStart(2, "0");
@@ -57,16 +52,11 @@ export default function Header({ onFallAlertTest }: HeaderProps) {
 
         <S.TitleTextBox>
           <S.PageTitle>{currentPage.title}</S.PageTitle>
-
           <S.PageDescription>{currentPage.description}</S.PageDescription>
         </S.TitleTextBox>
       </S.TitleArea>
 
       <S.RightArea>
-        <S.TestAlertButton onClick={onFallAlertTest}>
-          낙상 테스트
-        </S.TestAlertButton>
-
         <S.DateTimeBox>
           <S.DateText>
             {year}.{month}.{date} {week}
@@ -105,7 +95,6 @@ export default function Header({ onFallAlertTest }: HeaderProps) {
           <S.ProfileInfo>
             <S.ProfileName>홍길동 보호자</S.ProfileName>
             <S.ProfileRole>보호자 계정</S.ProfileRole>
-
             <S.LogoutButton>LOGOUT</S.LogoutButton>
           </S.ProfileInfo>
         </S.ProfileBox>
