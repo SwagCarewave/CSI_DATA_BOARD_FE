@@ -5,7 +5,9 @@ import ElderlyListCard from "../components/Settings/ElderlyListCard";
 import ElderlyAddModal from "../components/Settings/ElderlyAddModal";
 import RoomListCard from "../components/Settings/RoomListCard";
 import RoomAddModal from "../components/Settings/RoomAddModal";
-import AlertSettingCard from "../components/Settings/AlertSettingCard";
+import AlertSettingCard, {
+  type Sensitivity,
+} from "../components/Settings/AlertSettingCard";
 
 import { initialElderlyList, type Elderly } from "../data/elderlyList";
 import {
@@ -28,6 +30,10 @@ export default function SettingsPage() {
   const [isElderlyModalOpen, setIsElderlyModalOpen] = useState(false);
   const [editingElderly, setEditingElderly] = useState<Elderly | null>(null);
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
+
+  const [browserNotification, setBrowserNotification] = useState(true);
+  const [sensitivity, setSensitivity] = useState<Sensitivity>("중간");
+  const [thresholdMinutes, setThresholdMinutes] = useState(30);
 
   const nextElderlyId =
     elderlyList.length > 0
@@ -72,6 +78,9 @@ export default function SettingsPage() {
   };
 
   const handleSaveRoom = (data: Omit<Room, "id" | "status">) => {
+    const isDuplicate = rooms.some((room) => room.roomNumber === data.roomNumber);
+    if (isDuplicate) return;
+
     setRooms((prev) => [
       ...prev,
       { id: nextRoomId, ...data, status: "연결 불가" },
@@ -98,7 +107,16 @@ export default function SettingsPage() {
           <RoomListCard rooms={rooms} onAddClick={() => setIsRoomModalOpen(true)} />
         )}
 
-        {activeTab === "alert" && <AlertSettingCard />}
+        {activeTab === "alert" && (
+          <AlertSettingCard
+            browserNotification={browserNotification}
+            onBrowserNotificationChange={setBrowserNotification}
+            sensitivity={sensitivity}
+            onSensitivityChange={setSensitivity}
+            thresholdMinutes={thresholdMinutes}
+            onThresholdMinutesChange={setThresholdMinutes}
+          />
+        )}
       </S.TabContent>
 
       {isElderlyModalOpen && (
@@ -119,6 +137,7 @@ export default function SettingsPage() {
       {isRoomModalOpen && (
         <RoomAddModal
           roomNumbers={roomNumbers}
+          existingRoomNumbers={rooms.map((room) => room.roomNumber)}
           onAddRoomNumber={handleAddRoomNumber}
           onCancel={() => setIsRoomModalOpen(false)}
           onSave={handleSaveRoom}

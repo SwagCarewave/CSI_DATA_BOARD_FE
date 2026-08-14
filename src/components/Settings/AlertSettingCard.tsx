@@ -6,7 +6,7 @@ import { BellIcon, PulseIcon, ClockIcon, SendIcon, PersonIcon } from "./icons";
 
 import * as S from "../../styles/Settings/AlertSettingCard";
 
-type Sensitivity = "낮음" | "중간" | "높음";
+export type Sensitivity = "낮음" | "중간" | "높음";
 
 const SENSITIVITY_OPTIONS: Sensitivity[] = ["낮음", "중간", "높음"];
 
@@ -15,40 +15,64 @@ const EMERGENCY_CONTACT = {
   phone: "010-1234-5678",
 };
 
-export default function AlertSettingCard() {
-  const [browserNotification, setBrowserNotification] = useState(true);
-  const [sensitivity, setSensitivity] = useState<Sensitivity>("중간");
-  const [thresholdMinutes, setThresholdMinutes] = useState(30);
+interface AlertSettingCardProps {
+  browserNotification: boolean;
+  onBrowserNotificationChange: (value: boolean) => void;
+  sensitivity: Sensitivity;
+  onSensitivityChange: (value: Sensitivity) => void;
+  thresholdMinutes: number;
+  onThresholdMinutesChange: (value: number) => void;
+}
+
+export default function AlertSettingCard({
+  browserNotification,
+  onBrowserNotificationChange,
+  sensitivity,
+  onSensitivityChange,
+  thresholdMinutes,
+  onThresholdMinutesChange,
+}: AlertSettingCardProps) {
   const [showEnableConfirm, setShowEnableConfirm] = useState(false);
   const [isFallAlertOpen, setIsFallAlertOpen] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
 
-  const fireTestNotification = () => {
-    if (typeof Notification === "undefined") return;
+  const requestNotificationPermission = (): Promise<boolean> => {
+    if (typeof Notification === "undefined") return Promise.resolve(false);
+    if (Notification.permission === "granted") return Promise.resolve(true);
+    if (Notification.permission === "denied") return Promise.resolve(false);
 
-    const send = () => {
-      new Notification("[테스트] 낙상 감지 알림", {
-        body: "더미 낙상 이벤트: 101호에서 낙상이 감지되었습니다.",
-      });
-    };
-
-    if (Notification.permission === "granted") {
-      send();
-    } else if (Notification.permission !== "denied") {
-      Notification.requestPermission().then((permission) => {
-        if (permission === "granted") send();
-      });
-    }
+    return Notification.requestPermission().then(
+      (permission) => permission === "granted"
+    );
   };
 
-  const runFallAlertTest = () => {
-    fireTestNotification();
-    setIsFallAlertOpen(true);
+  const sendTestNotification = () => {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission !== "granted") return;
+
+    new Notification("[테스트] 낙상 감지 알림", {
+      body: "더미 낙상 이벤트: 101호에서 낙상이 감지되었습니다.",
+    });
+  };
+
+  const handleToggleClick = () => {
+    if (browserNotification) {
+      onBrowserNotificationChange(false);
+      setPermissionDenied(false);
+      return;
+    }
+
+    requestNotificationPermission().then((granted) => {
+      onBrowserNotificationChange(granted);
+      setPermissionDenied(!granted);
+    });
   };
 
   const handleTestClick = () => {
     if (browserNotification) {
-      runFallAlertTest();
+      sendTestNotification();
+      setIsFallAlertOpen(true);
       return;
     }
 
@@ -56,9 +80,14 @@ export default function AlertSettingCard() {
   };
 
   const handleEnableConfirm = () => {
-    setBrowserNotification(true);
     setShowEnableConfirm(false);
-    runFallAlertTest();
+
+    requestNotificationPermission().then((granted) => {
+      onBrowserNotificationChange(granted);
+      setPermissionDenied(!granted);
+      if (granted) sendTestNotification();
+      setIsFallAlertOpen(true);
+    });
   };
 
   const handleSave = () => {
@@ -82,10 +111,19 @@ export default function AlertSettingCard() {
           type="button"
           $on={browserNotification}
           aria-label="브라우저 알림 토글"
-          onClick={() => setBrowserNotification((prev) => !prev)}
+          aria-pressed={browserNotification}
+          onClick={handleToggleClick}
         />
 
-        <S.RowDescription>낙상 감지 시 브라우저 알림을 받습니다.</S.RowDescription>
+        <S.RowDescription>
+          낙상 감지 시 브라우저 알림을 받습니다.
+          {permissionDenied && (
+            <S.ErrorText>
+              브라우저 알림 권한이 차단되어 있습니다. 브라우저 설정에서 권한을
+              허용해주세요.
+            </S.ErrorText>
+          )}
+        </S.RowDescription>
       </S.Row>
 
       <S.Row>
@@ -96,13 +134,15 @@ export default function AlertSettingCard() {
           <S.RowLabel>낙상 감지 민감도</S.RowLabel>
         </S.RowLabelGroup>
 
-        <S.SegmentGroup>
+        <S.SegmentGroup role="radiogroup" aria-label="낙상 감지 민감도">
           {SENSITIVITY_OPTIONS.map((option) => (
             <S.SegmentButton
               key={option}
               type="button"
+              role="radio"
+              aria-checked={sensitivity === option}
               $active={sensitivity === option}
-              onClick={() => setSensitivity(option)}
+              onClick={() => onSensitivityChange(option)}
             >
               {option}
             </S.SegmentButton>
@@ -129,17 +169,17 @@ export default function AlertSettingCard() {
             onChange={(e) => {
               const next = Number(e.target.value);
               if (Number.isNaN(next)) return;
-              setThresholdMinutes(next);
+              onThresholdMinutesChange(next);
             }}
             onBlur={() =>
-              setThresholdMinutes((prev) => Math.max(1, Math.round(prev)))
+              onThresholdMinutesChange(Math.max(1, Math.round(thresholdMinutes)))
             }
           />
           <S.StepperArrows>
             <S.StepperArrowButton
               type="button"
               aria-label="기준 시간 증가"
-              onClick={() => setThresholdMinutes((prev) => prev + 1)}
+              onClick={() => onThresholdMinutesChange(thresholdMinutes + 1)}
             >
               ▲
             </S.StepperArrowButton>
@@ -147,7 +187,7 @@ export default function AlertSettingCard() {
               type="button"
               aria-label="기준 시간 감소"
               onClick={() =>
-                setThresholdMinutes((prev) => Math.max(1, prev - 1))
+                onThresholdMinutesChange(Math.max(1, thresholdMinutes - 1))
               }
             >
               ▼

@@ -72,6 +72,13 @@ export const RowDescription = styled.p`
   text-align: left;
 `;
 
+export const ErrorText = styled.span`
+  display: block;
+  margin-top: 4px;
+
+  color: ${({ theme }) => theme.colors.danger};
+`;
+
 export const ToggleSwitch = styled.button<{ $on: boolean }>`
   position: relative;
   width: 46px;
@@ -134,6 +141,10 @@ export const StepperBox = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 10px;
   overflow: hidden;
+
+  &:focus-within {
+    border-color: ${({ theme }) => theme.colors.DeepBlue};
+  }
 `;
 
 export const StepperInput = styled.input`
