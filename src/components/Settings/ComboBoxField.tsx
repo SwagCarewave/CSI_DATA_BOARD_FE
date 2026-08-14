@@ -22,6 +22,7 @@ export default function ComboBoxField({
   const [isOpen, setIsOpen] = useState(false);
   const [isFiltering, setIsFiltering] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const firstOptionRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -75,12 +76,28 @@ export default function ComboBoxField({
           onChange(e.target.value);
           setIsFiltering(true);
         }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            setIsOpen(false);
+          } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            firstOptionRef.current?.focus();
+          }
+        }}
       />
 
       {isOpen && (
         <S.Dropdown>
-          {filteredOptions.map((option) => (
-            <S.Option key={option} onClick={() => handleSelect(option)}>
+          {filteredOptions.map((option, index) => (
+            <S.Option
+              key={option}
+              type="button"
+              ref={index === 0 ? firstOptionRef : undefined}
+              onClick={() => handleSelect(option)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setIsOpen(false);
+              }}
+            >
               {option}
             </S.Option>
           ))}
@@ -90,7 +107,14 @@ export default function ComboBoxField({
           )}
 
           {canAddNewOption && (
-            <S.AddOption onClick={handleAdd}>
+            <S.AddOption
+              type="button"
+              ref={filteredOptions.length === 0 ? firstOptionRef : undefined}
+              onClick={handleAdd}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setIsOpen(false);
+              }}
+            >
               + "{trimmedValue}" 추가하기
             </S.AddOption>
           )}

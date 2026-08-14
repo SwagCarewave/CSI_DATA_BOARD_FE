@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 
 import type { Room } from "../../data/roomList";
 import ComboBoxField from "./ComboBoxField";
+import { useModalFocusTrap } from "./useModalFocusTrap";
 
 import * as S from "../../styles/Settings/ElderlyAddModal";
 
 interface RoomAddModalProps {
   roomNumbers: string[];
+  existingRoomNumbers: string[];
   onAddRoomNumber: (value: string) => void;
   onCancel: () => void;
   onSave: (data: Omit<Room, "id" | "status">) => void;
@@ -14,12 +16,15 @@ interface RoomAddModalProps {
 
 export default function RoomAddModal({
   roomNumbers,
+  existingRoomNumbers,
   onAddRoomNumber,
   onCancel,
   onSave,
 }: RoomAddModalProps) {
   const [roomNumber, setRoomNumber] = useState("");
   const [deviceCount, setDeviceCount] = useState("");
+
+  const modalRef = useModalFocusTrap<HTMLDivElement>();
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -29,23 +34,36 @@ export default function RoomAddModal({
     };
   }, []);
 
+  const trimmedRoomNumber = roomNumber.trim();
+  const isDuplicateRoom = existingRoomNumbers.includes(trimmedRoomNumber);
+  const deviceCountNumber = Number(deviceCount);
+
   const isValid =
-    roomNumber.trim().length > 0 &&
+    trimmedRoomNumber.length > 0 &&
+    !isDuplicateRoom &&
     deviceCount.trim().length > 0 &&
-    Number(deviceCount) > 0;
+    Number.isInteger(deviceCountNumber) &&
+    deviceCountNumber > 0;
 
   const handleSave = () => {
     if (!isValid) return;
 
     onSave({
-      roomNumber: roomNumber.trim(),
-      deviceCount: Number(deviceCount),
+      roomNumber: trimmedRoomNumber,
+      deviceCount: deviceCountNumber,
     });
   };
 
   return (
     <S.Overlay onClick={onCancel}>
-      <S.ModalBox onClick={(e) => e.stopPropagation()}>
+      <S.ModalBox
+        ref={modalRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="방 추가"
+        onClick={(e) => e.stopPropagation()}
+      >
         <S.Title>방 추가</S.Title>
 
         <S.Field>
@@ -58,6 +76,9 @@ export default function RoomAddModal({
             onChange={setRoomNumber}
             onAddOption={onAddRoomNumber}
           />
+          {isDuplicateRoom && (
+            <S.ErrorText>이미 등록된 방 번호입니다.</S.ErrorText>
+          )}
         </S.Field>
 
         <S.Field>
@@ -66,6 +87,7 @@ export default function RoomAddModal({
             <S.Input
               type="number"
               min={1}
+              step={1}
               placeholder="장치 대수 입력"
               aria-label="ESP32 장치 대수 입력"
               value={deviceCount}

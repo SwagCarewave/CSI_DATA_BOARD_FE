@@ -93,6 +93,11 @@ export const AgeInputWrapper = styled.div`
   }
 `;
 
+export const ErrorText = styled.span`
+  color: ${({ theme }) => theme.colors.danger};
+  font-size: 12px;
+`;
+
 export const ButtonRow = styled.div`
   display: flex;
   gap: 10px;

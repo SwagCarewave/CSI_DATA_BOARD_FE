@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import type { Elderly } from "../../data/elderlyList";
 import ComboBoxField from "./ComboBoxField";
+import { useModalFocusTrap } from "./useModalFocusTrap";
 
 import * as S from "../../styles/Settings/ElderlyAddModal";
 
@@ -31,6 +32,8 @@ export default function ElderlyAddModal({
   const [roomNumber, setRoomNumber] = useState(editingElderly?.roomNumber ?? "");
   const [caregiver, setCaregiver] = useState(editingElderly?.caregiver ?? "");
 
+  const modalRef = useModalFocusTrap<HTMLDivElement>();
+
   useEffect(() => {
     document.body.style.overflow = "hidden";
 
@@ -39,10 +42,12 @@ export default function ElderlyAddModal({
     };
   }, []);
 
+  const ageNumber = Number(age);
   const isValid =
     name.trim().length > 0 &&
     age.trim().length > 0 &&
-    Number(age) > 0 &&
+    Number.isInteger(ageNumber) &&
+    ageNumber > 0 &&
     roomNumber.trim().length > 0 &&
     caregiver.trim().length > 0;
 
@@ -51,7 +56,7 @@ export default function ElderlyAddModal({
 
     onSave({
       name: name.trim(),
-      age: Number(age),
+      age: ageNumber,
       roomNumber: roomNumber.trim(),
       caregiver: caregiver.trim(),
     });
@@ -59,7 +64,14 @@ export default function ElderlyAddModal({
 
   return (
     <S.Overlay onClick={onCancel}>
-      <S.ModalBox onClick={(e) => e.stopPropagation()}>
+      <S.ModalBox
+        ref={modalRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={editingElderly ? "어르신 정보 수정" : "어르신 추가"}
+        onClick={(e) => e.stopPropagation()}
+      >
         <S.Title>{editingElderly ? "어르신 정보 수정" : "어르신 추가"}</S.Title>
 
         <S.Field>
@@ -78,6 +90,7 @@ export default function ElderlyAddModal({
             <S.Input
               type="number"
               min={0}
+              step={1}
               placeholder="나이 입력"
               aria-label="나이 입력"
               value={age}

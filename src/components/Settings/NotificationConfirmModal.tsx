@@ -1,4 +1,5 @@
 import * as S from "../../styles/Settings/NotificationConfirmModal";
+import { useModalFocusTrap } from "./useModalFocusTrap";
 
 interface NotificationConfirmModalProps {
   onCancel: () => void;
@@ -9,9 +10,18 @@ export default function NotificationConfirmModal({
   onCancel,
   onConfirm,
 }: NotificationConfirmModalProps) {
+  const modalRef = useModalFocusTrap<HTMLDivElement>();
+
   return (
     <S.Overlay onClick={onCancel}>
-      <S.ModalBox onClick={(e) => e.stopPropagation()}>
+      <S.ModalBox
+        ref={modalRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="브라우저 알림 활성화 확인"
+        onClick={(e) => e.stopPropagation()}
+      >
         <S.Message>
           브라우저 알림이 꺼져 있습니다.
           <br />

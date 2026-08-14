@@ -29,7 +29,7 @@ export const Input = styled.input`
   }
 `;
 
-export const Dropdown = styled.ul`
+export const Dropdown = styled.div`
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -40,7 +40,9 @@ export const Dropdown = styled.ul`
   overflow-y: auto;
   padding: 6px;
 
-  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 
   background-color: ${({ theme }) => theme.colors.white};
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -48,15 +50,21 @@ export const Dropdown = styled.ul`
   box-shadow: ${({ theme }) => theme.shadow.card};
 `;
 
-export const Option = styled.li`
+export const Option = styled.button`
+  width: 100%;
   padding: 8px 10px;
+
+  border: none;
   border-radius: 6px;
+  background-color: transparent;
 
   color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 13px;
+  text-align: left;
   cursor: pointer;
 
-  &:hover {
+  &:hover,
+  &:focus-visible {
     background-color: ${({ theme }) => theme.colors.sidebarBackground};
   }
 `;
@@ -65,12 +73,13 @@ export const AddOption = styled(Option)`
   color: ${({ theme }) => theme.colors.DeepBlue};
   font-weight: 700;
 
-  &:hover {
+  &:hover,
+  &:focus-visible {
     background-color: ${({ theme }) => theme.colors.successLight};
   }
 `;
 
-export const EmptyOption = styled.li`
+export const EmptyOption = styled.div`
   padding: 8px 10px;
 
   color: ${({ theme }) => theme.colors.textSecondary};
