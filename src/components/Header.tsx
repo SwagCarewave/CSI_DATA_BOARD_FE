@@ -19,6 +19,11 @@ export default function Header() {
       description:
         "발생한 낙상 감지 및 이상 징후 이벤트를 조회하고 관리합니다.",
     },
+    "/settings": {
+      number: "04.",
+      title: "설정 페이지",
+      description: "시스템 설정 및 어르신, 방, 알림 설정을 관리합니다.",
+    },
   };
 
   const currentPage =
