@@ -1,12 +1,25 @@
 // src/components/monitoring/SkeletonCard.tsx
 
-import * as S from "../../styles/monitoring/SkeletonCard";
+import * as S from "../../styles/Monitoring/SkeletonCard";
 
 const keypoints = [
-  "머리", "목", "왼쪽 어깨", "오른쪽 어깨", "왼쪽 팔꿈치",
-  "오른쪽 팔꿈치", "왼쪽 손목", "오른쪽 손목", "왼쪽 골반",
-  "오른쪽 골반", "왼쪽 무릎", "오른쪽 무릎", "왼쪽 발목",
-  "오른쪽 발목", "왼쪽 발", "오른쪽 발", "중심점",
+  "머리",
+  "목",
+  "왼쪽 어깨",
+  "오른쪽 어깨",
+  "왼쪽 팔꿈치",
+  "오른쪽 팔꿈치",
+  "왼쪽 손목",
+  "오른쪽 손목",
+  "왼쪽 골반",
+  "오른쪽 골반",
+  "왼쪽 무릎",
+  "오른쪽 무릎",
+  "왼쪽 발목",
+  "오른쪽 발목",
+  "왼쪽 발",
+  "오른쪽 발",
+  "중심점",
 ];
 
 export default function SkeletonCard() {

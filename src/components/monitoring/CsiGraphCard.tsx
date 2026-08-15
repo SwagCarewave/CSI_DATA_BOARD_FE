@@ -10,7 +10,7 @@ import {
   Brush,
 } from "recharts";
 
-import * as S from "../../styles/monitoring/CsiGraphCard";
+import * as S from "../../styles/Monitoring/CsiGraphCard";
 
 interface BreathingData {
   breathing_rate: number;

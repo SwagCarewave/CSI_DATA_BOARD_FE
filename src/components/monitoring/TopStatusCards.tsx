@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import * as S from "../../styles/monitoring/TopStatusCards";
+import * as S from "../../styles/Monitoring/TopStatusCards";
 
 import normalIcon from "../../assets/monitoring/nomal.svg";
 import peopleIcon from "../../assets/monitoring/people.svg";
