@@ -1,7 +1,7 @@
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 
-import * as S from "../styles/monitoring/MonitoringPage";
+import * as S from "../styles/Monitoring/MonitoringPage";
 
 interface MainLayoutProps {
   children: React.ReactNode;

@@ -13,12 +13,20 @@ export default function Header() {
       title: "실시간 모니터링",
       description: "선택한 방의 상태를 실시간으로 모니터링합니다.",
     },
+
     "/alerts": {
       number: "02.",
       title: "알림 이력",
       description:
         "발생한 낙상 감지 및 이상 징후 이벤트를 조회하고 관리합니다.",
     },
+
+    "/care-report": {
+      number: "03.",
+      title: "AI 케어 리포트",
+      description: "AI가 분석한 일일 케어 리포트를 확인하고 관리합니다.",
+    },
+
     "/settings": {
       number: "04.",
       title: "설정 페이지",

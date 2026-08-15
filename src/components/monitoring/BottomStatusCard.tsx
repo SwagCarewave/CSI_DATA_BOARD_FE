@@ -1,6 +1,6 @@
 // src/components/monitoring/BottomStatusCard.tsx
 
-import * as S from "../../styles/monitoring/BottomStatusCard";
+import * as S from "../../styles/Monitoring/BottomStatusCard";
 
 export default function BottomStatusCard() {
   return (
