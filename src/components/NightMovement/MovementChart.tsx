@@ -1,29 +1,30 @@
 // src/components/NightMovement/MovementChart.tsx
 
-// 시간별 움직임 강도: 면적 그래프 + 주요 움직임 구간(분홍 띠·말풍선) + 재생 위치 + 마우스 툴팁
+// 시간별 움직임 강도: 모델 활동 지수(0~1) 면적 그래프 + 판정 기준선 + 활동 사건 구간(분홍 띠·말풍선) + 재생 위치 + 마우스 툴팁
 
 import { useId, useMemo, useState } from "react";
 import type { PointerEvent } from "react";
 
 import * as S from "../../styles/NightMovement/Charts";
 import { chartColors } from "../../styles/NightMovement/Charts";
-import type { CsiAnalysis } from "../../utils/csiAnalysis";
 import { placeCallouts } from "../../utils/chartCallouts";
-import { formatClock, formatTick, timeTicks, valueTicks } from "../../utils/chartScale";
+import { formatClock, formatTick, rangeTicks, timeTicks } from "../../utils/chartScale";
 import type { TimeView } from "../../utils/chartScale";
+import type { ChartMarker, SignalSeries } from "../../utils/signalSeries";
 import ChartCallout from "./ChartCallout";
 import { useElementWidth } from "./useElementWidth";
 
 const PAD = { left: 84, right: 14, top: 10, bottom: 50 };
 
 interface MovementChartProps {
-  analysis: CsiAnalysis;
+  series: SignalSeries;
+  markers: ChartMarker[];
   view: TimeView;
   height: number;
   playheadMs?: number;
 }
 
-export default function MovementChart({ analysis, view, height, playheadMs }: MovementChartProps) {
+export default function MovementChart({ series, markers, view, height, playheadMs }: MovementChartProps) {
   const [ref, width] = useElementWidth<HTMLDivElement>();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const gradientId = useId();
@@ -34,21 +35,23 @@ export default function MovementChart({ analysis, view, height, playheadMs }: Mo
   const plotH = plot.bottom - plot.top;
   const toX = (ms: number) => plot.left + ((ms - view.startMs) / span) * plotW;
 
-  // 보이는 구간의 점 (구간 중앙 시각 기준)
+  // 보이는 구간의 점
   const points = useMemo(() => {
     const list: { t: number; v: number }[] = [];
-    for (let b = 0; b < analysis.binCount; b++) {
-      const t = analysis.startMs + (b + 0.5) * analysis.binMs;
-      if (t >= view.startMs && t <= view.endMs) list.push({ t, v: analysis.motion[b] });
-    }
+    series.ts.forEach((t, i) => {
+      if (t >= view.startMs && t <= view.endMs) list.push({ t, v: series.activity[i] });
+    });
     return list;
-  }, [analysis, view.startMs, view.endMs]);
+  }, [series, view.startMs, view.endMs]);
 
-  const finiteValues = points.filter((p) => !Number.isNaN(p.v)).map((p) => p.v);
-  const y = valueTicks(Math.max(...finiteValues, analysis.motionThreshold) * 1.15);
-  const toY = (v: number) => plot.bottom - (v / y.max) * plotH;
+  const hasValues = points.some((p) => !Number.isNaN(p.v));
+  // 활동 지수는 확률(0~1)이므로 축을 고정한다
+  const y = rangeTicks(0, 1);
+  const threshold = series.threshold;
+  const toY = (v: number) => plot.bottom - ((v - y.min) / (y.max - y.min)) * plotH;
+  const baselineY = toY(Math.max(y.min, 0));
 
-  // 신호가 빈 구간에서는 선을 끊는다
+  // 빈 구간(null)에서는 선을 끊는다
   const runs: { t: number; v: number }[][] = [];
   for (const point of points) {
     if (Number.isNaN(point.v)) {
@@ -58,11 +61,18 @@ export default function MovementChart({ analysis, view, height, playheadMs }: Mo
     if (runs.length === 0) runs.push([]);
     runs.at(-1)!.push(point);
   }
+  // 데이터가 빈 값으로 끝나면 마지막에 빈 조각이 남으므로 제외한다
+  const filledRuns = runs.filter((run) => run.length > 0);
   const linePath = (run: { t: number; v: number }[]) =>
     run.map((p, i) => `${i === 0 ? "M" : "L"}${toX(p.t).toFixed(1)},${toY(p.v).toFixed(1)}`).join("");
 
-  const segments = analysis.segments.filter((s) => s.endMs >= view.startMs && s.startMs <= view.endMs);
-  const callouts = placeCallouts(segments, toX, plot, 2);
+  const visibleMarkers = markers.filter((m) => m.endMs >= view.startMs && m.startMs <= view.endMs);
+  const callouts = placeCallouts(
+    visibleMarkers.filter((m) => m.peakMs >= view.startMs && m.peakMs <= view.endMs),
+    toX,
+    plot,
+    2,
+  );
   const x = timeTicks(view, Math.max(2, Math.floor(plotW / 84)));
   const showSeconds = span < 10 * 60 * 1000;
 
@@ -90,7 +100,7 @@ export default function MovementChart({ analysis, view, height, playheadMs }: Mo
           width={width}
           height={height}
           role="img"
-          aria-label={`움직임 강도 그래프, ${formatClock(view.startMs)}부터 ${formatClock(view.endMs)}까지, 주요 움직임 ${segments.length}건`}
+          aria-label={`모델 활동 지수 그래프, ${formatClock(view.startMs)}부터 ${formatClock(view.endMs)}까지, 활동 사건 ${visibleMarkers.length}건`}
         >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -111,10 +121,10 @@ export default function MovementChart({ analysis, view, height, playheadMs }: Mo
           ))}
           <text fontSize={11} fill={chartColors.axisText}>
             <tspan x={4} y={plot.top + plotH / 2 - 4}>
-              움직임 강도
+              활동 지수
             </tspan>
             <tspan x={4} dy={15}>
-              (지수)
+              (모델)
             </tspan>
           </text>
           {x.ticks.map((tick) => (
@@ -127,15 +137,15 @@ export default function MovementChart({ analysis, view, height, playheadMs }: Mo
           ))}
           <line x1={plot.left} x2={plot.left} y1={plot.top} y2={plot.bottom} stroke={chartColors.axisText} strokeOpacity={0.5} />
 
-          {/* 주요 움직임 구간 */}
-          {segments.map((segment) => {
-            const x1 = Math.max(plot.left, toX(segment.startMs));
-            const x2 = Math.min(plot.right, toX(segment.endMs));
+          {/* 활동 사건 구간 */}
+          {visibleMarkers.map((marker) => {
+            const x1 = Math.max(plot.left, toX(marker.startMs));
+            const x2 = Math.min(plot.right, toX(marker.endMs));
             const center = (x1 + x2) / 2;
             const bandWidth = Math.max(8, x2 - x1);
             return (
               <rect
-                key={segment.startMs}
+                key={marker.key}
                 x={center - bandWidth / 2}
                 y={plot.top}
                 width={bandWidth}
@@ -145,23 +155,44 @@ export default function MovementChart({ analysis, view, height, playheadMs }: Mo
             );
           })}
 
-          {/* 움직임 강도 */}
-          {runs.map((run) =>
+          {/* 판정 기준선: 이 선을 3초 넘게 넘으면 사건·알림 */}
+          {threshold !== null && (
+            <g>
+              <line
+                x1={plot.left}
+                x2={plot.right}
+                y1={toY(threshold)}
+                y2={toY(threshold)}
+                stroke={chartColors.navy}
+                strokeOpacity={0.55}
+                strokeWidth={1.2}
+                strokeDasharray="6 4"
+              />
+              <text x={plot.right - 4} y={toY(threshold) - 5} fontSize={10.5} textAnchor="end" fill={chartColors.navy}>
+                판정 기준 {threshold.toFixed(2)}
+              </text>
+            </g>
+          )}
+
+          {/* 모델 활동 지수 */}
+          {filledRuns.map((run) =>
             run.length > 1 ? (
               <g key={run[0].t}>
                 <path
-                  d={`${linePath(run)}L${toX(run.at(-1)!.t).toFixed(1)},${plot.bottom}L${toX(run[0].t).toFixed(1)},${plot.bottom}Z`}
+                  d={`${linePath(run)}L${toX(run.at(-1)!.t).toFixed(1)},${baselineY}L${toX(run[0].t).toFixed(1)},${baselineY}Z`}
                   fill={`url(#${gradientId})`}
                 />
                 <path d={linePath(run)} fill="none" stroke={chartColors.line} strokeWidth={2} strokeLinejoin="round" />
               </g>
-            ) : null,
+            ) : (
+              <circle key={run[0].t} cx={toX(run[0].t)} cy={toY(run[0].v)} r={2} fill={chartColors.line} />
+            ),
           )}
 
           {/* 말풍선 · 점선 */}
           {callouts.map((callout) => (
             <line
-              key={`line-${callout.segment.startMs}`}
+              key={`line-${callout.marker.key}`}
               x1={callout.lineX}
               x2={callout.lineX}
               y1={callout.boxY + 18}
@@ -172,7 +203,7 @@ export default function MovementChart({ analysis, view, height, playheadMs }: Mo
             />
           ))}
           {callouts.map((callout) => (
-            <ChartCallout key={callout.segment.startMs} callout={callout} showSeconds={showSeconds} />
+            <ChartCallout key={callout.marker.key} callout={callout} showSeconds={showSeconds} />
           ))}
 
           {/* 재생 위치 */}
@@ -184,10 +215,23 @@ export default function MovementChart({ analysis, view, height, playheadMs }: Mo
           <g transform={`translate(${plot.left}, ${height - 10})`} fontSize={12} fill={chartColors.axisText}>
             <line x1={0} x2={20} y1={-4} y2={-4} stroke={chartColors.line} strokeWidth={3} strokeLinecap="round" />
             <text x={28} y={0}>
-              움직임 강도
+              활동 지수
             </text>
-            <rect x={112} y={-10} width={20} height={12} rx={2} fill={chartColors.band} />
-            <text x={140} y={0}>
+            <line
+              x1={100}
+              x2={120}
+              y1={-4}
+              y2={-4}
+              stroke={chartColors.navy}
+              strokeOpacity={0.55}
+              strokeWidth={1.5}
+              strokeDasharray="6 4"
+            />
+            <text x={128} y={0}>
+              판정 기준선
+            </text>
+            <rect x={212} y={-10} width={20} height={12} rx={2} fill={chartColors.band} />
+            <text x={240} y={0}>
               주요 움직임 구간
             </text>
           </g>
@@ -211,13 +255,15 @@ export default function MovementChart({ analysis, view, height, playheadMs }: Mo
         </S.Svg>
       )}
 
-      {width > 0 && points.length === 0 && <S.EmptyMessage>표시할 데이터가 없습니다.</S.EmptyMessage>}
+      {width > 0 && !hasValues && (
+        <S.EmptyMessage>표시할 데이터가 없습니다</S.EmptyMessage>
+      )}
 
       {hover && (
         <S.Tooltip style={{ left: Math.min(toX(hover.t) + 12, width - 128), top: plot.top + 8 }}>
           <span>{formatClock(hover.t)}</span>
           <div>
-            움직임 강도 <strong>{hover.v.toFixed(3)}</strong>
+            활동 지수 <strong>{hover.v.toFixed(2)}</strong>
           </div>
         </S.Tooltip>
       )}

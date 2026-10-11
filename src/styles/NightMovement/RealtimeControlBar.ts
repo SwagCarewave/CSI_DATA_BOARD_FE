@@ -78,6 +78,11 @@ export const Switch = styled.button`
 
   border-radius: 14px;
 
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
   &:focus-visible {
     outline: 2px solid ${cw.blue};
     outline-offset: 2px;

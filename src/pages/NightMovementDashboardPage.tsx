@@ -1,8 +1,9 @@
 // src/pages/NightMovementDashboardPage.tsx
 
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import * as S from "../styles/NightMovement/NightMovementDashboardPage";
+import { Button } from "../styles/NightMovement/tokens";
 
 import DashboardHeader from "../components/NightMovement/DashboardHeader";
 import type { DashboardMode } from "../components/NightMovement/DashboardHeader";
@@ -17,6 +18,7 @@ import RangeSelect from "../components/NightMovement/RangeSelect";
 import CsvToolbar from "../components/NightMovement/CsvToolbar";
 import CsvEmptyToolbar from "../components/NightMovement/CsvEmptyToolbar";
 import CsvPlayback from "../components/NightMovement/CsvPlayback";
+import CsvAnalysisNotice from "../components/NightMovement/CsvAnalysisNotice";
 import {
   AllRecordsModal,
   CaregiverResultModal,
@@ -32,27 +34,23 @@ import {
   UploadModal,
 } from "../components/NightMovement/UploadModals";
 
-import {
-  eventsFromAnalysis,
-  graphRangeOptions,
-  initialReceivers,
-  realtimeDemoFile,
-  realtimeInfo,
-  recordFromAnalysis,
-  sampleCsvFiles,
-} from "../data/nightMovement";
-import type { ActivityEvent, CsvRecord, EventStatus, GraphRange, PlaybackSpeed } from "../data/nightMovement";
-import { analyzeCsiInWorker, CsiWorkerError } from "../utils/analyzeCsiInWorker";
-import type { CsiAnalysis } from "../utils/csiAnalysis";
-import { inspectCsiCsv } from "../utils/csiCsv";
-import type { CsvInspection } from "../utils/csiCsv";
+import { confirmEvent } from "../api/carewave";
+import { errorMessage } from "../api/client";
+import type { CsvFile } from "../api/types";
+import { defaultReceivers, graphRangeOptions, resultToGuardian, rxStatusToState } from "../data/nightMovement";
+import type { GraphRange } from "../data/nightMovement";
+import { useCsvFiles } from "../hooks/useCsvFiles";
+import { useLiveSession } from "../hooks/useLiveSession";
+import { useNow } from "../hooks/useNow";
+import { useReplay } from "../hooks/useReplay";
 import { formatClock } from "../utils/chartScale";
 import type { TimeView } from "../utils/chartScale";
+import { markersFromEvents, toActivityEvent, toCsvRecord } from "../utils/signalSeries";
 import { formatDuration } from "../utils/nightMovementFormat";
 
 const GRAPH_HEIGHT = 250;
 const HEATMAP_HEIGHT = 138;
-const PLAYBACK_TICK_MS = 250;
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 type ModalState =
   | { type: "none" }
@@ -61,166 +59,130 @@ type ModalState =
   | { type: "result"; eventId: string }
   | { type: "saved" }
   | { type: "upload" }
-  | { type: "uploadConfirm"; file: CsvInspection }
-  | { type: "fileError" }
-  | { type: "analyzing"; file: CsvInspection }
-  | { type: "analysisFailed"; file: CsvInspection };
+  | { type: "uploadConfirm"; file: CsvFile }
+  | { type: "fileError"; message?: string }
+  | { type: "analyzing"; file: CsvFile }
+  | { type: "analysisFailed"; file: CsvFile; message: string };
 
-// 작은 파일도 진행 화면이 깜빡이지 않도록 최소 시간만큼 기다린다
-const atLeast = async <T,>(promise: Promise<T>, ms: number) => {
-  const [result] = await Promise.all([promise, new Promise((resolve) => setTimeout(resolve, ms))]);
-  return result;
+const rangeSeconds = (range: GraphRange) => graphRangeOptions.find((option) => option.value === range)?.seconds ?? 600;
+
+// CSV: 재생 위치를 가운데에 두고 선택한 기간만큼 (기록 범위를 넘지 않게)
+const playbackView = (record: TimeView, range: GraphRange, playheadMs: number): TimeView => {
+  const length = rangeSeconds(range) * 1000;
+  if (length >= record.endMs - record.startMs) return record;
+  const startMs = Math.min(Math.max(record.startMs, playheadMs - length / 2), record.endMs - length);
+  return { startMs, endMs: startMs + length };
 };
 
-const rangeMs = (range: GraphRange) => graphRangeOptions.find((option) => option.value === range)?.ms ?? Infinity;
-
-// 실시간: 가장 최근 N분
-const latestView = (analysis: CsiAnalysis, range: GraphRange): TimeView => ({
-  startMs: Math.max(analysis.startMs, analysis.endMs - rangeMs(range)),
-  endMs: analysis.endMs,
-});
-
-// CSV: 재생 위치를 가운데에 두고 N분 (기록 범위를 넘지 않게)
-const playbackView = (analysis: CsiAnalysis, range: GraphRange, playheadMs: number): TimeView => {
-  const length = rangeMs(range);
-  const total = analysis.endMs - analysis.startMs;
-  if (length >= total) return { startMs: analysis.startMs, endMs: analysis.endMs };
-  const startMs = Math.min(Math.max(analysis.startMs, playheadMs - length / 2), analysis.endMs - length);
-  return { startMs, endMs: startMs + length };
+const formatAgo = (seconds: number | null) => {
+  if (seconds === null) return "—";
+  if (seconds < 60) return `${Math.max(0, Math.round(seconds))}초 전`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}분 전`;
+  return `${Math.floor(seconds / 3600)}시간 전`;
 };
 
 export default function NightMovementDashboardPage() {
   const [mode, setMode] = useState<DashboardMode>("realtime");
   const [modal, setModal] = useState<ModalState>({ type: "none" });
-
-  // 실시간 (실제 수신 데이터가 연결되기 전까지 예시 CSV로 표시)
-  const [sleepMode, setSleepMode] = useState(realtimeInfo.sleepMode);
+  const [notice, setNotice] = useState<string | null>(null);
   const [realtimeRange, setRealtimeRange] = useState<GraphRange>("10m");
-  const [realtimeAnalysis, setRealtimeAnalysis] = useState<CsiAnalysis | null>(null);
-  const [realtimeEvents, setRealtimeEvents] = useState<ActivityEvent[]>([]);
-
-  // CSV 기록 조회
-  const [samplesLoading, setSamplesLoading] = useState(true);
-  const [csvRecords, setCsvRecords] = useState<CsvRecord[]>([]);
-  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [csvRange, setCsvRange] = useState<GraphRange>("all");
-  const [progress, setProgress] = useState(0);
-  const [playing, setPlaying] = useState(true);
-  const [speed, setSpeed] = useState<PlaybackSpeed>(1);
+  const [uploading, setUploading] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
-  const analysisToken = useRef(0);
+  const analysisCancel = useRef({ current: false });
+  const now = useNow();
 
-  const selectedRecord = csvRecords.find((record) => record.id === selectedRecordId) ?? null;
-  const currentEvents = mode === "realtime" ? realtimeEvents : (selectedRecord?.events ?? null);
+  const live = useLiveSession(rangeSeconds(realtimeRange));
+  const csv = useCsvFiles();
+
+  const selectedFile = csv.selected;
+  const recordStart = selectedFile ? selectedFile.record_start * 1000 : 0;
+  const recordEnd = selectedFile ? selectedFile.record_end * 1000 : 0;
+  const recordView = useMemo(
+    () => (selectedFile ? { startMs: recordStart, endMs: recordEnd } : null),
+    [selectedFile, recordStart, recordEnd],
+  );
+  const replay = useReplay(csv.result?.analysisId ?? null, recordView);
+
+  const apiEvents = mode === "realtime" ? live.events : (csv.result?.events ?? null);
+  const currentEvents = useMemo(() => apiEvents?.map(toActivityEvent) ?? null, [apiEvents]);
   const closeModal = () => setModal({ type: "none" });
 
-  // 예시 CSV 분석 (src/data/csi_raw)
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const records: CsvRecord[] = [];
-      for (const [index, sample] of sampleCsvFiles.entries()) {
-        try {
-          const analysis = await analyzeCsiInWorker(sample.url);
-          records.push(recordFromAnalysis(`sample-${index}`, sample.name, analysis));
-          if (sample === realtimeDemoFile && !cancelled) {
-            setRealtimeAnalysis(analysis);
-            setRealtimeEvents(eventsFromAnalysis("rt", analysis));
-          }
-        } catch (error) {
-          console.error(`${sample.name} 분석 실패`, error);
-        }
-      }
-      if (cancelled) return;
-      setCsvRecords((prev) => [...prev, ...records]);
-      setSelectedRecordId((prev) => prev ?? records[0]?.id ?? null);
-      setSamplesLoading(false);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const selectRecord = (id: string | null) => {
-    setSelectedRecordId(id);
-    setProgress(0);
+  /* 실시간 */
+  const session = live.session;
+  const running = session?.status === "running";
+  const liveSeries = live.series;
+  const liveEndMs = liveSeries?.ts.at(-1) ?? (session ? (session.last_packet_at ?? session.started_at) * 1000 : now);
+  const liveView: TimeView = {
+    startMs: Math.max(session ? session.started_at * 1000 : 0, liveEndMs - rangeSeconds(realtimeRange) * 1000),
+    endMs: liveEndMs,
   };
+  if (liveView.endMs - liveView.startMs < 10000) liveView.endMs = liveView.startMs + 10000; // 시작 직후에도 축이 보이게
+  const liveMarkers = useMemo(() => markersFromEvents(live.events, now), [live.events, now]);
+  const elapsedMs = session ? (running ? now - session.started_at * 1000 : session.elapsed_sec * 1000) : 0;
+  const receivers = session?.rx.length
+    ? session.rx.map((rx) => ({ device: rx.rx, state: rxStatusToState[rx.status] }))
+    : defaultReceivers;
+  const sinceLast = session?.seconds_since_last_packet ?? null;
+  const signalCaption = !running ? (session ? "관찰 종료" : "관찰 전") : sinceLast !== null && sinceLast < 5 ? "신호 수신 중" : "수신 대기 중";
 
-  // 끝까지 재생하면 자동으로 멈춘 상태가 된다
-  const isPlaying = playing && progress < 1;
+  /* CSV */
+  const csvMarkers = useMemo(
+    () => (csv.result ? markersFromEvents(csv.result.events, now) : []),
+    [csv.result, now],
+  );
+  const csvView = recordView ? playbackView(recordView, csvRange, replay.positionMs) : null;
 
-  // 재생: 1배속 = 실제 기록 시간과 같은 속도
-  useEffect(() => {
-    if (mode !== "csv" || !isPlaying || !selectedRecord) return;
-    const durationMs = selectedRecord.end.getTime() - selectedRecord.start.getTime();
-    const timer = window.setInterval(() => {
-      setProgress((prev) => Math.min(1, prev + (speed * PLAYBACK_TICK_MS) / durationMs));
-    }, PLAYBACK_TICK_MS);
-    return () => window.clearInterval(timer);
-  }, [mode, isPlaying, speed, selectedRecord]);
-
-  const deleteRecord = (id: string) => {
-    const remaining = csvRecords.filter((record) => record.id !== id);
-    setCsvRecords(remaining);
-    if (id === selectedRecordId) selectRecord(remaining[0]?.id ?? null);
-  };
-
-  const updateEventStatus = (eventId: string, status: EventStatus) => {
-    const apply = (events: ActivityEvent[]) =>
-      events.map((event) => (event.id === eventId ? { ...event, status } : event));
-
-    if (mode === "realtime") {
-      setRealtimeEvents(apply);
-    } else {
-      setCsvRecords((prev) =>
-        prev.map((record) =>
-          record.id === selectedRecordId ? { ...record, events: apply(record.events) } : record,
-        ),
-      );
+  /* 업로드 · 분석 */
+  const handleFileSelected = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      setModal({ type: "fileError", message: "CSV 파일(.csv)만 올릴 수 있습니다." });
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setModal({ type: "fileError", message: "파일이 50MB를 넘습니다." });
+      return;
+    }
+    setUploading(true);
+    try {
+      const created = await csv.upload(file);
+      setModal({ type: "uploadConfirm", file: created });
+    } catch (e) {
+      setModal({ type: "fileError", message: errorMessage(e) });
+    } finally {
+      setUploading(false);
     }
   };
 
-  const handleFileSelected = async (file: File) => {
-    const result = await inspectCsiCsv(file);
-    setModal(result.ok ? { type: "uploadConfirm", file: result.data } : { type: "fileError" });
-  };
-
-  // 업로드한 CSV 분석 (Web Worker, 실제 진행률 표시)
-  const startAnalysis = async (file: CsvInspection) => {
-    const token = ++analysisToken.current;
+  const runAnalysis = async (file: CsvFile) => {
+    analysisCancel.current.current = true; // 이전 진행 표시는 멈춘다
+    const cancel = { current: false };
+    analysisCancel.current = cancel;
     setAnalysisProgress(0);
     setModal({ type: "analyzing", file });
 
     try {
-      const analysis = await atLeast(
-        analyzeCsiInWorker(file.file, (ratio) => {
-          if (analysisToken.current === token) setAnalysisProgress(ratio);
-        }),
-        600,
-      );
-      if (analysisToken.current !== token) return;
-
-      const id = `upload-${token}`;
-      setCsvRecords((prev) => [recordFromAnalysis(id, file.name, analysis), ...prev]);
-      selectRecord(id);
-      setPlaying(true);
+      await csv.analyze(file.id, (ratio) => !cancel.current && setAnalysisProgress(ratio), cancel);
+      if (cancel.current) return;
       setMode("csv");
       setModal({ type: "none" });
-    } catch (error) {
-      if (analysisToken.current !== token) return;
-      const isFormat = error instanceof CsiWorkerError && error.reason === "format";
-      setModal(isFormat ? { type: "fileError" } : { type: "analysisFailed", file });
+    } catch (e) {
+      if (!cancel.current) setModal({ type: "analysisFailed", file, message: errorMessage(e) });
     }
   };
 
-  const cancelAnalysis = () => {
-    analysisToken.current++;
+  // 진행 화면만 닫는다 (서버 분석은 계속되고, 파일 목록에 "분석 중"으로 보인다)
+  const closeAnalyzing = () => {
+    analysisCancel.current.current = true;
     closeModal();
+    csv.refreshFiles();
   };
 
-  const openEvent = (event: ActivityEvent) => setModal({ type: "detail", eventId: event.id });
+  const deleteRecord = (id: string) => {
+    csv.remove(id).catch((e) => setNotice(errorMessage(e)));
+  };
+
+  const openEvent = (eventId: string) => setModal({ type: "detail", eventId });
   const findEvent = (id: string) => currentEvents?.find((event) => event.id === id);
 
   const renderModal = () => {
@@ -231,7 +193,7 @@ export default function NightMovementDashboardPage() {
             events={currentEvents ?? []}
             initialTab={modal.tab}
             onClose={closeModal}
-            onSelectEvent={openEvent}
+            onSelectEvent={(event) => openEvent(event.id)}
           />
         );
       case "detail": {
@@ -249,8 +211,10 @@ export default function NightMovementDashboardPage() {
         return (
           <CaregiverResultModal
             onClose={closeModal}
-            onSubmit={(result) => {
-              updateEventStatus(modal.eventId, result);
+            onSubmit={async (result) => {
+              const updated = await confirmEvent(modal.eventId, resultToGuardian(result));
+              if (updated.source === "live") live.replaceEvent(updated);
+              else csv.replaceEvent(updated);
               setModal({ type: "saved" });
             }}
           />
@@ -258,21 +222,33 @@ export default function NightMovementDashboardPage() {
       case "saved":
         return <SavedModal onClose={closeModal} />;
       case "upload":
-        return <UploadModal onClose={closeModal} onFileSelected={handleFileSelected} />;
+        return <UploadModal uploading={uploading} onClose={closeModal} onFileSelected={handleFileSelected} />;
       case "uploadConfirm":
         return (
-          <UploadConfirmModal file={modal.file} onClose={closeModal} onAnalyze={() => startAnalysis(modal.file)} />
+          <UploadConfirmModal
+            file={{
+              name: modal.file.filename,
+              start: new Date(modal.file.record_start * 1000),
+              end: new Date(modal.file.record_end * 1000),
+              receivers: modal.file.receivers,
+            }}
+            onClose={closeModal}
+            onAnalyze={() => runAnalysis(modal.file)}
+          />
         );
       case "fileError":
-        return <FileErrorModal onClose={closeModal} onPickAnother={() => setModal({ type: "upload" })} />;
+        return (
+          <FileErrorModal message={modal.message} onClose={closeModal} onPickAnother={() => setModal({ type: "upload" })} />
+        );
       case "analyzing":
-        return <AnalyzingModal progress={analysisProgress} onClose={cancelAnalysis} />;
+        return <AnalyzingModal progress={analysisProgress} onClose={closeAnalyzing} />;
       case "analysisFailed":
         return (
           <AnalysisFailedModal
+            message={modal.message}
             onClose={closeModal}
             onPickAnother={() => setModal({ type: "upload" })}
-            onRetry={() => startAnalysis(modal.file)}
+            onRetry={() => runAnalysis(modal.file)}
           />
         );
       default:
@@ -286,51 +262,119 @@ export default function NightMovementDashboardPage() {
       compact={mode === "csv"}
       onViewAll={() => setModal({ type: "allRecords", tab: "all" })}
       onViewUnconfirmed={() => setModal({ type: "allRecords", tab: "pending" })}
-      onSelectEvent={openEvent}
+      onSelectEvent={(event) => openEvent(event.id)}
     />
   );
 
-  const realtimeView = realtimeAnalysis ? latestView(realtimeAnalysis, realtimeRange) : null;
-  const playheadMs = selectedRecord
-    ? selectedRecord.analysis.startMs + progress * (selectedRecord.analysis.endMs - selectedRecord.analysis.startMs)
-    : 0;
-  const csvView = selectedRecord ? playbackView(selectedRecord.analysis, csvRange, playheadMs) : null;
+  // 분석 결과가 없을 때 재생 막대 자리에 보여 줄 안내
+  const analysisNotice = () => {
+    if (!selectedFile) return null;
+    const latest = selectedFile.latest_analysis;
+    if (latest?.status === "queued" || latest?.status === "running") {
+      return (
+        <CsvAnalysisNotice
+          title="분석 중입니다."
+          description={`서버에서 파일을 분석하고 있습니다 (${Math.round(latest.progress * 100)}%). 끝나면 그래프가 표시됩니다.`}
+        />
+      );
+    }
+    if (latest?.status === "succeeded") {
+      return csv.resultError ? (
+        <CsvAnalysisNotice title="분석 결과를 불러오지 못했습니다." description={csv.resultError} actionLabel="다시 불러오기" onAction={csv.refreshFiles} />
+      ) : (
+        <CsvAnalysisNotice title="분석 결과를 불러오는 중입니다." description="잠시만 기다려 주세요." />
+      );
+    }
+    return (
+      <CsvAnalysisNotice
+        title={latest?.status === "failed" ? "분석하지 못한 파일입니다." : "아직 분석하지 않은 파일입니다."}
+        description={latest?.error_message ?? "분석을 시작하면 움직임 그래프와 활동 사건이 표시됩니다."}
+        actionLabel={latest?.status === "failed" ? "다시 시도" : "분석 시작"}
+        onAction={() => runAnalysis(selectedFile)}
+      />
+    );
+  };
+
+  const errorText = notice ?? (mode === "realtime" ? live.error : csv.error);
 
   return (
     <S.Page>
       <S.Board>
         <DashboardHeader mode={mode} onModeChange={setMode} />
 
+        {live.alert && (
+          <S.Notice $tone="alert" role="alert">
+            <strong>보호자 확인이 필요해요</strong>
+            <span>{live.alert.message}</span>
+            <S.NoticeActions>
+              <Button
+                type="button"
+                $width={110}
+                $height={36}
+                onClick={() => {
+                  setMode("realtime");
+                  openEvent(live.alert!.eventId);
+                }}
+              >
+                확인하기
+              </Button>
+              <Button type="button" $variant="secondary" $width={80} $height={36} onClick={live.dismissAlert}>
+                닫기
+              </Button>
+            </S.NoticeActions>
+          </S.Notice>
+        )}
+
+        {errorText && (
+          <S.Notice $tone="error" role="status">
+            <strong>연결 오류</strong>
+            <span>{errorText}</span>
+            {notice && (
+              <S.NoticeActions>
+                <Button type="button" $variant="secondary" $width={80} $height={36} onClick={() => setNotice(null)}>
+                  닫기
+                </Button>
+              </S.NoticeActions>
+            )}
+          </S.Notice>
+        )}
+
         {mode === "realtime" && (
           <>
             <RealtimeControlBar
-              sleepMode={sleepMode}
-              onSleepModeChange={setSleepMode}
-              observationStart={realtimeAnalysis ? formatClock(realtimeAnalysis.startMs, false) : "—"}
-              receivers={initialReceivers}
-              lastSignal={realtimeInfo.lastSignal}
+              sleepMode={running}
+              busy={live.loading || live.toggling}
+              onSleepModeChange={live.setSleepMode}
+              observationStart={session ? formatClock(session.started_at * 1000, false) : "—"}
+              receivers={receivers}
+              lastSignal={formatAgo(sinceLast)}
+              signalCaption={signalCaption}
             />
 
             <S.Row>
               <S.LeftColumn>
                 <ObservationSummary
                   timeLabel="관찰 시간"
-                  timeValue={realtimeAnalysis ? formatDuration(realtimeAnalysis.endMs - realtimeAnalysis.startMs) : "—"}
+                  timeValue={session ? formatDuration(elapsedMs) : "—"}
                   timeExtra={
-                    realtimeAnalysis
-                      ? `${formatClock(realtimeAnalysis.startMs, false)} ~ ${formatClock(realtimeAnalysis.endMs, false)}`
+                    session
+                      ? `${formatClock(session.started_at * 1000, false)} ~ ${
+                          running || !session.stopped_at ? "진행 중" : formatClock(session.stopped_at * 1000, false)
+                        }`
                       : undefined
                   }
                   eventsLabel="감지된 주요 움직임"
-                  eventsValue={realtimeAnalysis ? `${realtimeEvents.length}건` : "—"}
+                  eventsValue={session ? `${live.events.length}건` : "—"}
                 />
                 <MovementGraphCard
                   subtitle="시간에 따른 움직임의 강도를 분석한 결과입니다."
                   action={<RangeSelect value={realtimeRange} onChange={setRealtimeRange} />}
-                  emptyText="데이터를 불러오는 중입니다"
+                  emptyText={live.loading ? "불러오는 중입니다" : "취침 모드를 켜면 관찰을 시작합니다"}
                   chart={
-                    realtimeAnalysis &&
-                    realtimeView && <MovementChart analysis={realtimeAnalysis} view={realtimeView} height={GRAPH_HEIGHT} />
+                    session &&
+                    liveSeries && (
+                      <MovementChart series={liveSeries} markers={liveMarkers} view={liveView} height={GRAPH_HEIGHT} />
+                    )
                   }
                 />
               </S.LeftColumn>
@@ -340,45 +384,44 @@ export default function NightMovementDashboardPage() {
             <S.Row>
               <WifiHeatmapCard
                 subtitle="RX1 · RX2 · RX3 신호를 함께 표시합니다."
-                emptyText="데이터를 불러오는 중입니다"
+                emptyText={live.loading ? "불러오는 중입니다" : "취침 모드를 켜면 관찰을 시작합니다"}
                 chart={
-                  realtimeAnalysis &&
-                  realtimeView && <HeatmapChart analysis={realtimeAnalysis} view={realtimeView} height={HEATMAP_HEIGHT} />
+                  session &&
+                  liveSeries && (
+                    <HeatmapChart series={liveSeries} markers={liveMarkers} view={liveView} height={HEATMAP_HEIGHT} />
+                  )
                 }
               />
             </S.Row>
           </>
         )}
 
-        {mode === "csv" && selectedRecord && csvView && (
+        {mode === "csv" && selectedFile && (
           <>
             <CsvToolbar
-              records={csvRecords}
-              selected={selectedRecord}
-              onSelect={selectRecord}
+              records={csv.files.map(toCsvRecord)}
+              selected={toCsvRecord(selectedFile)}
+              onSelect={csv.select}
               onDelete={deleteRecord}
               onUpload={() => setModal({ type: "upload" })}
             />
 
             <S.Row>
               <div style={{ width: "100%" }}>
-                <CsvPlayback
-                  start={selectedRecord.start}
-                  end={selectedRecord.end}
-                  progress={progress}
-                  playing={isPlaying}
-                  speed={speed}
-                  onTogglePlay={() => {
-                    if (progress >= 1) {
-                      setProgress(0);
-                      setPlaying(true);
-                      return;
-                    }
-                    setPlaying((prev) => !prev);
-                  }}
-                  onSeek={setProgress}
-                  onSpeedChange={setSpeed}
-                />
+                {csv.result && replay.ready ? (
+                  <CsvPlayback
+                    start={new Date(recordStart)}
+                    end={new Date(recordEnd)}
+                    progress={replay.progress}
+                    playing={replay.playing}
+                    speed={replay.speed}
+                    onTogglePlay={replay.togglePlay}
+                    onSeek={replay.seek}
+                    onSpeedChange={replay.setSpeed}
+                  />
+                ) : (
+                  analysisNotice()
+                )}
               </div>
             </S.Row>
 
@@ -386,20 +429,25 @@ export default function NightMovementDashboardPage() {
               <S.LeftColumn>
                 <ObservationSummary
                   timeLabel="기록 시간"
-                  timeValue={formatDuration(selectedRecord.end.getTime() - selectedRecord.start.getTime())}
+                  timeValue={formatDuration(recordEnd - recordStart)}
                   eventsLabel="감지된 활동 사건"
-                  eventsValue={`${selectedRecord.events.length}건`}
+                  eventsValue={csv.result ? `${csv.result.events.length}건` : "—"}
                 />
                 <MovementGraphCard
                   subtitle="재생 시각에 맞춰 움직임 그래프와 CSI 히트맵이 함께 갱신됩니다."
                   action={<RangeSelect variant="button" value={csvRange} onChange={setCsvRange} />}
+                  emptyText="분석 후 그래프가 표시됩니다"
                   chart={
-                    <MovementChart
-                      analysis={selectedRecord.analysis}
-                      view={csvView}
-                      height={GRAPH_HEIGHT}
-                      playheadMs={playheadMs}
-                    />
+                    csv.result &&
+                    csvView && (
+                      <MovementChart
+                        series={csv.result.series}
+                        markers={csvMarkers}
+                        view={csvView}
+                        height={GRAPH_HEIGHT}
+                        playheadMs={replay.ready ? replay.positionMs : undefined}
+                      />
+                    )
                   }
                 />
               </S.LeftColumn>
@@ -409,22 +457,27 @@ export default function NightMovementDashboardPage() {
             <S.Row>
               <WifiHeatmapCard
                 subtitle="같은 재생 시각의 RX 신호를 표시합니다. 수신 공백은 빈 구간으로 표시합니다."
+                emptyText="분석 후 히트맵이 표시됩니다"
                 chart={
-                  <HeatmapChart
-                    analysis={selectedRecord.analysis}
-                    view={csvView}
-                    height={HEATMAP_HEIGHT}
-                    playheadMs={playheadMs}
-                  />
+                  csv.result &&
+                  csvView && (
+                    <HeatmapChart
+                      series={csv.result.series}
+                      markers={csvMarkers}
+                      view={csvView}
+                      height={HEATMAP_HEIGHT}
+                      playheadMs={replay.ready ? replay.positionMs : undefined}
+                    />
+                  )
                 }
               />
             </S.Row>
           </>
         )}
 
-        {mode === "csv" && !selectedRecord && (
+        {mode === "csv" && !selectedFile && (
           <>
-            <CsvEmptyToolbar loading={samplesLoading} onUpload={() => setModal({ type: "upload" })} />
+            <CsvEmptyToolbar loading={csv.loading} onUpload={() => setModal({ type: "upload" })} />
 
             <S.Row $mt={32}>
               <S.LeftColumn>

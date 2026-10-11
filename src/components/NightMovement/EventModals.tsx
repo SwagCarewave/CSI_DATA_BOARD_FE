@@ -78,11 +78,26 @@ export function EventDetailModal({ event, onClose, onSelectResult }: EventDetail
 /* 보호자 확인 결과 */
 interface CaregiverResultModalProps {
   onClose: () => void;
-  onSubmit: (result: ConfirmResult) => void;
+  // 서버 저장. 실패하면 안내 문구로 reject
+  onSubmit: (result: ConfirmResult) => Promise<void>;
 }
 
 export function CaregiverResultModal({ onClose, onSubmit }: CaregiverResultModalProps) {
   const [selected, setSelected] = useState<ConfirmResult | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (!selected) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSubmit(selected);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "저장하지 못했습니다. 다시 시도해 주세요.");
+      setSaving(false);
+    }
+  };
 
   return (
     <Modal title="보호자 확인 결과" onClose={onClose} paddingBottom={38}>
@@ -107,14 +122,15 @@ export function CaregiverResultModal({ onClose, onSubmit }: CaregiverResultModal
         })}
       </S.RadioGroup>
 
-      <S.Footer $mt={60}>
-        <S.SubmitButton
-          type="button"
-          $width={150}
-          disabled={selected === null}
-          onClick={() => selected && onSubmit(selected)}
-        >
-          기록 완료
+      {error && (
+        <S.Text $mt={14} $tone="red" role="alert">
+          {error}
+        </S.Text>
+      )}
+
+      <S.Footer $mt={error ? 26 : 60}>
+        <S.SubmitButton type="button" $width={150} disabled={selected === null || saving} onClick={submit}>
+          {saving ? "저장 중" : "기록 완료"}
         </S.SubmitButton>
       </S.Footer>
     </Modal>

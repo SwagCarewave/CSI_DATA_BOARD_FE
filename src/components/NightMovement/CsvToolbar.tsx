@@ -61,6 +61,7 @@ export default function CsvToolbar({ records, selected, onSelect, onDelete, onUp
                         }}
                       >
                         {record.name}
+                        {record.analysisLabel && <M.FileStatus> · {record.analysisLabel}</M.FileStatus>}
                       </M.FileName>
                       <M.DeleteButton
                         type="button"
