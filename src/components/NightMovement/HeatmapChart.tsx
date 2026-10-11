@@ -1,93 +1,115 @@
 // src/components/NightMovement/HeatmapChart.tsx
 
-// 시간별 Wi-Fi 신호 변화: 시간 × 서브캐리어 진폭 히트맵 (수신기 평균) + 색 막대 + 주요 움직임 표시
+// 시간별 Wi-Fi 신호 변화: 시간 × 서브캐리어 평균 진폭 히트맵 + 색 막대 + 활동 사건 표시
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { PointerEvent } from "react";
 
 import * as S from "../../styles/NightMovement/Charts";
 import { chartColors } from "../../styles/NightMovement/Charts";
-import type { CsiAnalysis } from "../../utils/csiAnalysis";
 import { placeCallouts } from "../../utils/chartCallouts";
 import { formatClock, formatTick, jetColor, jetGradientStops, timeTicks, valueTicks } from "../../utils/chartScale";
 import type { TimeView } from "../../utils/chartScale";
+import type { ChartMarker, SignalSeries } from "../../utils/signalSeries";
 import ChartCallout from "./ChartCallout";
 import { useElementWidth } from "./useElementWidth";
 
 const PAD = { left: 84, right: 62, top: 14, bottom: 22 };
 
 interface HeatmapChartProps {
-  analysis: CsiAnalysis;
+  series: SignalSeries;
+  markers: ChartMarker[];
   view: TimeView;
   height: number;
   playheadMs?: number;
 }
 
-export default function HeatmapChart({ analysis, view, height, playheadMs }: HeatmapChartProps) {
+// 색 범위 상한: 보이는 값의 99번째 백분위를 5 단위로 올림
+function colorMax(columns: (number[] | null)[]) {
+  const values: number[] = [];
+  const stride = Math.max(1, Math.floor(columns.length / 400));
+  for (let i = 0; i < columns.length; i += stride) columns[i]?.forEach((v) => Number.isFinite(v) && values.push(v));
+  if (values.length === 0) return 20;
+  values.sort((a, b) => a - b);
+  return Math.max(5, Math.ceil(values[Math.floor((values.length - 1) * 0.99)] / 5) * 5);
+}
+
+export default function HeatmapChart({ series, markers, view, height, playheadMs }: HeatmapChartProps) {
   const [ref, width] = useElementWidth<HTMLDivElement>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<{ x: number; y: number; t: number; sub: number; value: number } | null>(null);
   const gradientId = useId();
 
-  const { binMs, binCount, subcarrierCount, heatmap, heatmapMax } = analysis;
+  const { subcarrierCount, stepMs } = series;
   const span = Math.max(1, view.endMs - view.startMs);
   const plot = { left: PAD.left, right: Math.max(PAD.left + 1, width - PAD.right), top: PAD.top, bottom: height - PAD.bottom };
   const plotW = plot.right - plot.left;
   const plotH = plot.bottom - plot.top;
   const toX = (ms: number) => plot.left + ((ms - view.startMs) / span) * plotW;
 
-  const firstBin = Math.max(0, Math.floor((view.startMs - analysis.startMs) / binMs));
-  const lastBin = Math.min(binCount - 1, Math.ceil((view.endMs - analysis.startMs) / binMs) - 1);
+  // 보이는 열의 인덱스
+  const visible = useMemo(() => {
+    const indices: number[] = [];
+    series.ts.forEach((t, i) => {
+      if (t + stepMs / 2 >= view.startMs && t - stepMs / 2 <= view.endMs) indices.push(i);
+    });
+    return indices;
+  }, [series, stepMs, view.startMs, view.endMs]);
 
-  // 히트맵 칸 그리기
+  const maxValue = useMemo(() => colorMax(visible.map((i) => series.heatmap[i])), [series, visible]);
+
+  // 히트맵 칸 그리기: 열마다 그 시각 위치에 그린다 (빈 열은 비워 둠)
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || width === 0 || lastBin < firstBin) return;
+    if (!canvas || width === 0) return;
 
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(plotW * dpr);
     canvas.height = Math.round(plotH * dpr);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, plotW, plotH);
+    if (visible.length === 0) return;
 
-    const columns = lastBin - firstBin + 1;
     const offscreen = document.createElement("canvas");
-    offscreen.width = columns;
+    offscreen.width = visible.length;
     offscreen.height = subcarrierCount;
     const offCtx = offscreen.getContext("2d");
     if (!offCtx) return;
 
-    const image = offCtx.createImageData(columns, subcarrierCount);
-    for (let c = 0; c < columns; c++) {
+    const image = offCtx.createImageData(visible.length, subcarrierCount);
+    visible.forEach((index, column) => {
+      const values = series.heatmap[index];
+      if (!values) return;
       for (let k = 0; k < subcarrierCount; k++) {
-        const value = heatmap[(firstBin + c) * subcarrierCount + k];
-        const pixel = ((subcarrierCount - 1 - k) * columns + c) * 4; // 0번 서브캐리어가 아래
-        if (Number.isNaN(value)) continue; // 신호 공백은 비워 둔다
-        const [r, g, b] = jetColor(value / heatmapMax);
-        image.data.set([r, g, b, 255], pixel);
+        const value = values[k];
+        if (!Number.isFinite(value)) continue;
+        const [r, g, b] = jetColor(value / maxValue);
+        image.data.set([r, g, b, 255], ((subcarrierCount - 1 - k) * visible.length + column) * 4); // 0번이 아래
       }
-    }
+    });
     offCtx.putImageData(image, 0, 0);
 
-    const binStartX = ((analysis.startMs + firstBin * binMs - view.startMs) / span) * plotW;
-    const binEndX = ((analysis.startMs + (lastBin + 1) * binMs - view.startMs) / span) * plotW;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, plotW, plotH);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(offscreen, binStartX, 0, binEndX - binStartX, plotH);
-  }, [analysis, heatmap, heatmapMax, subcarrierCount, binMs, firstBin, lastBin, plotW, plotH, span, view.startMs, width]);
+    const columnWidth = Math.max(1, (stepMs / span) * plotW);
+    visible.forEach((index, column) => {
+      const x = ((series.ts[index] - view.startMs) / span) * plotW - columnWidth / 2;
+      ctx.drawImage(offscreen, column, 0, 1, subcarrierCount, x, 0, columnWidth + 0.5, plotH);
+    });
+  }, [series, visible, maxValue, subcarrierCount, stepMs, plotW, plotH, span, view.startMs, width]);
 
   const x = timeTicks(view, Math.max(2, Math.floor(plotW / 84)));
   // 시안처럼 10 단위 (서브캐리어가 적으면 5 단위)
   const subStep = subcarrierCount > 30 ? 10 : 5;
   const subTicks = Array.from({ length: Math.floor((subcarrierCount - 1) / subStep) + 1 }, (_, i) => i * subStep);
-  const colorTicks = valueTicks(heatmapMax).ticks.filter((tick) => tick <= heatmapMax);
+  const colorTicks = valueTicks(maxValue).ticks.filter((tick) => tick <= maxValue);
   const toSubY = (sub: number) => plot.bottom - ((sub + 0.5) / subcarrierCount) * plotH;
-  const toColorY = (value: number) => plot.bottom - (value / heatmapMax) * plotH;
+  const toColorY = (value: number) => plot.bottom - (value / maxValue) * plotH;
 
-  const segments = analysis.segments.filter((s) => s.endMs >= view.startMs && s.startMs <= view.endMs);
-  const callouts = plotH > 70 ? placeCallouts(segments, toX, plot, 1) : [];
+  const visibleMarkers = markers.filter((m) => m.peakMs >= view.startMs && m.peakMs <= view.endMs);
+  const callouts = plotH > 70 ? placeCallouts(visibleMarkers, toX, plot, 1) : [];
   const showSeconds = span < 10 * 60 * 1000;
 
   const handlePointerMove = (e: PointerEvent<SVGRectElement>) => {
@@ -95,11 +117,18 @@ export default function HeatmapChart({ analysis, view, height, playheadMs }: Hea
     const px = e.clientX - rect.left;
     const py = e.clientY - rect.top;
     const t = view.startMs + (px / rect.width) * span;
-    const bin = Math.floor((t - analysis.startMs) / binMs);
+    let nearest = -1;
+    let best = Infinity;
+    for (const index of visible) {
+      const distance = Math.abs(series.ts[index] - t);
+      if (distance < best) {
+        best = distance;
+        nearest = index;
+      }
+    }
     const sub = Math.min(subcarrierCount - 1, Math.max(0, Math.floor(((rect.height - py) / rect.height) * subcarrierCount)));
-    if (bin < 0 || bin >= binCount) return setHover(null);
-    const value = heatmap[bin * subcarrierCount + sub];
-    setHover(Number.isNaN(value) ? null : { x: plot.left + px, y: plot.top + py, t, sub, value });
+    const value = nearest >= 0 && best <= stepMs ? series.heatmap[nearest]?.[sub] : undefined;
+    setHover(value === undefined || !Number.isFinite(value) ? null : { x: plot.left + px, y: plot.top + py, t: series.ts[nearest], sub, value });
   };
 
   return (
@@ -159,12 +188,12 @@ export default function HeatmapChart({ analysis, view, height, playheadMs }: Hea
               </text>
             ))}
 
-            {/* 주요 움직임 */}
-            {segments.map((segment) => (
+            {/* 활동 사건 */}
+            {visibleMarkers.map((marker) => (
               <line
-                key={segment.startMs}
-                x1={toX(segment.peakMs)}
-                x2={toX(segment.peakMs)}
+                key={marker.key}
+                x1={toX(marker.peakMs)}
+                x2={toX(marker.peakMs)}
                 y1={plot.top}
                 y2={plot.bottom}
                 stroke={chartColors.marker}
@@ -173,7 +202,7 @@ export default function HeatmapChart({ analysis, view, height, playheadMs }: Hea
               />
             ))}
             {callouts.map((callout) => (
-              <ChartCallout key={callout.segment.startMs} callout={callout} showSeconds={showSeconds} />
+              <ChartCallout key={callout.marker.key} callout={callout} showSeconds={showSeconds} />
             ))}
 
             {/* 재생 위치 */}
@@ -196,6 +225,8 @@ export default function HeatmapChart({ analysis, view, height, playheadMs }: Hea
           </S.Svg>
         </>
       )}
+
+      {width > 0 && visible.length === 0 && <S.EmptyMessage>표시할 데이터가 없습니다</S.EmptyMessage>}
 
       {hover && (
         <S.Tooltip style={{ left: Math.min(hover.x + 12, width - 128), top: Math.max(0, hover.y - 64) }}>

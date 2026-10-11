@@ -183,3 +183,10 @@ export const FileList = styled.div`
   flex-direction: column;
   gap: 6px;
 `;
+
+// 분석 상태 (분석 중 · 분석 실패 등)
+export const FileStatus = styled.span`
+  color: ${cw.menuHint};
+  font-size: 12px;
+  font-weight: 400;
+`;

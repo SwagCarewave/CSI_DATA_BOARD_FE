@@ -10,18 +10,23 @@ import switchOffIcon from "../../assets/NightMovement/switchOff.svg";
 
 interface RealtimeControlBarProps {
   sleepMode: boolean;
+  // 서버 요청 중에는 스위치를 잠근다
+  busy?: boolean;
   onSleepModeChange: (next: boolean) => void;
   observationStart: string;
   receivers: Receiver[];
   lastSignal: string;
+  signalCaption: string;
 }
 
 export default function RealtimeControlBar({
   sleepMode,
+  busy = false,
   onSleepModeChange,
   observationStart,
   receivers,
   lastSignal,
+  signalCaption,
 }: RealtimeControlBarProps) {
   return (
     <S.Bar aria-label="실시간 제어">
@@ -32,6 +37,8 @@ export default function RealtimeControlBar({
           role="switch"
           aria-checked={sleepMode}
           aria-labelledby="sleep-mode-label"
+          aria-busy={busy}
+          disabled={busy}
           onClick={() => onSleepModeChange(!sleepMode)}
         >
           <Icon src={sleepMode ? switchOnIcon : switchOffIcon} alt="" width={60} height={28} />
@@ -42,7 +49,7 @@ export default function RealtimeControlBar({
 
       <S.Segment $width={166} $pl={53} $gap={5}>
         <S.Label>관찰 시작</S.Label>
-        <S.Value>{sleepMode ? observationStart : "—"}</S.Value>
+        <S.Value>{observationStart}</S.Value>
       </S.Segment>
 
       <S.Divider />
@@ -62,7 +69,7 @@ export default function RealtimeControlBar({
         <S.Label>마지막 신호 수신</S.Label>
         <S.SignalRow>
           <S.Value>{lastSignal}</S.Value>
-          <S.SignalCaption>신호 수신 중</S.SignalCaption>
+          <S.SignalCaption>{signalCaption}</S.SignalCaption>
         </S.SignalRow>
       </S.Segment>
     </S.Bar>

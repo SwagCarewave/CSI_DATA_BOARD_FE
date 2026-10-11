@@ -50,6 +50,21 @@ export function valueTicks(maxValue: number) {
   return { ticks, max: top, decimals };
 }
 
+// 음수도 포함하는 값 눈금 (움직임 강도는 기준선 아래로 내려갈 수 있다)
+export function rangeTicks(minValue: number, maxValue: number) {
+  const lo = Math.min(0, minValue);
+  const hi = Math.max(lo + 1e-6, maxValue);
+  const raw = (hi - lo) / 4;
+  const magnitude = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * magnitude).find((candidate) => candidate >= raw) ?? raw;
+  const min = Math.floor(lo / step) * step;
+  const max = Math.ceil(hi / step) * step;
+  const ticks: number[] = [];
+  for (let v = min; v <= max + step / 2; v += step) ticks.push(Number(v.toFixed(6)));
+  const decimals = Math.max(0, -Math.floor(Math.log10(step)) + (step / magnitude === 2.5 ? 1 : 0));
+  return { ticks, min, max, decimals };
+}
+
 // 시안의 히트맵 색 (파랑 → 하늘 → 노랑 → 빨강)
 export function jetColor(ratio: number): [number, number, number] {
   const t = Math.min(1, Math.max(0, ratio));

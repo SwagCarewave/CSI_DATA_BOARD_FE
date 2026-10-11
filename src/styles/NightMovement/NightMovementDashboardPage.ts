@@ -120,3 +120,39 @@ export const LeftColumn = styled.div`
     width: 100%;
   }
 `;
+
+// 서버 오류 · 실시간 알림 안내
+export const Notice = styled.div<{ $tone: "error" | "alert" }>`
+  margin-bottom: 12px;
+  padding: 12px 16px;
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+
+  border: 1px solid ${({ $tone }) => ($tone === "alert" ? "#FFB3C1" : "#FFD3DB")};
+  border-radius: 10px;
+  background-color: ${cw.pink};
+
+  color: ${cw.navy};
+  font-size: 14px;
+  line-height: 1.45;
+
+  & > strong {
+    color: ${cw.red};
+    font-weight: 700;
+  }
+
+  & > span {
+    flex: 1 1 240px;
+    min-width: 0;
+  }
+`;
+
+export const NoticeActions = styled.div`
+  margin-left: auto;
+
+  display: flex;
+  gap: 8px;
+`;

@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 
 notes/
+# 환경 변수 (비밀 값이 들어갈 수 있으므로 올리지 않음)
+.env
+.env.*
+!.env.example

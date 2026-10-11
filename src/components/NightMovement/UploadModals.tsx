@@ -5,19 +5,28 @@ import type { DragEvent } from "react";
 
 import * as S from "../../styles/NightMovement/Modal";
 import { Button, Icon } from "../../styles/NightMovement/tokens";
-import type { CsvInspection } from "../../utils/csiCsv";
 import { formatMonthDay, formatTime, needsSeconds } from "../../utils/nightMovementFormat";
 import Modal from "./Modal";
 
 import checkCircleIcon from "../../assets/NightMovement/checkCircle.svg";
 
+// 서버에 등록된 파일 정보 (업로드 응답)
+export interface UploadedFileInfo {
+  name: string;
+  start: Date;
+  end: Date;
+  receivers: string[];
+}
+
 /* CSV 파일 업로드 */
 interface UploadModalProps {
+  // 서버로 올리는 중
+  uploading?: boolean;
   onClose: () => void;
   onFileSelected: (file: File) => void;
 }
 
-export function UploadModal({ onClose, onFileSelected }: UploadModalProps) {
+export function UploadModal({ uploading = false, onClose, onFileSelected }: UploadModalProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -25,7 +34,7 @@ export function UploadModal({ onClose, onFileSelected }: UploadModalProps) {
     e.preventDefault();
     setDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file) onFileSelected(file);
+    if (file && !uploading) onFileSelected(file);
   };
 
   return (
@@ -41,9 +50,15 @@ export function UploadModal({ onClose, onFileSelected }: UploadModalProps) {
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
       >
-        <p>파일을 끌어 놓거나 선택하세요.</p>
-        <Button type="button" $variant="secondary" $width={150} onClick={() => inputRef.current?.click()}>
-          파일 선택
+        <p aria-live="polite">{uploading ? "파일을 올리고 확인하는 중입니다…" : "파일을 끌어 놓거나 선택하세요."}</p>
+        <Button
+          type="button"
+          $variant="secondary"
+          $width={150}
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+        >
+          {uploading ? "업로드 중" : "파일 선택"}
         </Button>
         <S.HiddenInput
           ref={inputRef}
@@ -71,7 +86,7 @@ export function UploadModal({ onClose, onFileSelected }: UploadModalProps) {
 
 /* 업로드 파일 확인 */
 interface UploadConfirmModalProps {
-  file: CsvInspection;
+  file: UploadedFileInfo;
   onClose: () => void;
   onAnalyze: () => void;
 }
@@ -88,14 +103,8 @@ export function UploadConfirmModal({ file, onClose, onAnalyze }: UploadConfirmMo
       </S.SuccessBadge>
       <S.Text $mt={24}>
         기록 시간{" "}
-        {file.start && file.end ? (
-          <>
-            <b>{formatMonthDay(file.start)}</b> {formatTime(file.start, needsSeconds(file.start, file.end))} –{" "}
-            <b>{formatMonthDay(file.end)}</b> {formatTime(file.end, needsSeconds(file.start, file.end))}
-          </>
-        ) : (
-          "확인할 수 없음"
-        )}
+        <b>{formatMonthDay(file.start)}</b> {formatTime(file.start, needsSeconds(file.start, file.end))} –{" "}
+        <b>{formatMonthDay(file.end)}</b> {formatTime(file.end, needsSeconds(file.start, file.end))}
       </S.Text>
       <S.Text $mt={11}>수신기 {file.receivers.join(" · ")}</S.Text>
       <S.Text $mt={29}>분석 결과는 CSV 기록 조회 화면에 표시됩니다.</S.Text>
@@ -136,17 +145,19 @@ export function AnalyzingModal({ progress, onClose }: AnalyzingModalProps) {
 
 /* 파일을 확인해 주세요 */
 interface FileErrorModalProps {
+  // 서버 안내 문구 (없으면 기본 안내)
+  message?: string;
   onClose: () => void;
   onPickAnother: () => void;
 }
 
-export function FileErrorModal({ onClose, onPickAnother }: FileErrorModalProps) {
+export function FileErrorModal({ message, onClose, onPickAnother }: FileErrorModalProps) {
   return (
     <Modal title="파일을 확인해 주세요" onClose={onClose} paddingBottom={23}>
       <S.Text $mt={28} $tone="red">
         분석을 시작할 수 없습니다.
       </S.Text>
-      <S.Text $mt={25}>필수 열이 없거나 파일 형식이 올바르지 않습니다.</S.Text>
+      <S.Text $mt={25}>{message ?? "필수 열이 없거나 파일 형식이 올바르지 않습니다."}</S.Text>
       <S.Text $mt={15}>타임스탬프, 수신기, CSI 진폭 항목을 확인하세요.</S.Text>
       <S.Footer $mt={106}>
         <Button type="button" $width={150} onClick={onPickAnother}>
@@ -159,16 +170,18 @@ export function FileErrorModal({ onClose, onPickAnother }: FileErrorModalProps) 
 
 /* 분석하지 못했습니다 */
 interface AnalysisFailedModalProps {
+  // 서버 안내 문구 (없으면 기본 안내)
+  message?: string;
   onClose: () => void;
   onPickAnother: () => void;
   onRetry: () => void;
 }
 
-export function AnalysisFailedModal({ onClose, onPickAnother, onRetry }: AnalysisFailedModalProps) {
+export function AnalysisFailedModal({ message, onClose, onPickAnother, onRetry }: AnalysisFailedModalProps) {
   return (
     <Modal title="분석하지 못했습니다" onClose={onClose} paddingBottom={23}>
       <S.Text $mt={28} $tone="red">
-        CSV 분석 중 오류가 발생했습니다.
+        {message ?? "CSV 분석 중 오류가 발생했습니다."}
       </S.Text>
       <S.Text $mt={25}>같은 파일로 다시 시도하거나 다른 파일을 선택해 주세요.</S.Text>
       <S.Text $mt={15}>문제가 계속되면 파일 내용과 형식을 확인해 주세요.</S.Text>
