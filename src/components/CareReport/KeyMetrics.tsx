@@ -1,4 +1,4 @@
-import bedIcon from "../../assets/CareReport/bed.svg";
+import bedIcon from "../../assets/CareReport/Bed.svg";
 import moonIcon from "../../assets/CareReport/moon.svg";
 import manIcon from "../../assets/CareReport/man.png";
 import fallRedIcon from "../../assets/CareReport/Fall_red.svg";
