@@ -1,6 +1,6 @@
 import type { AlertEvent } from "../../data/alertEvents";
 
-import * as S from "../../styles/alertHistory/AlertDetailCard";
+import * as S from "../../styles/AlertHistory/AlertDetailCard";
 
 interface AlertDetailCardProps {
   event: AlertEvent;
