@@ -1,0 +1,12 @@
+# Vercel CLI 배포 때 올리지 않을 파일
+# 비밀 값이 들어 있을 수 있는 환경 변수 파일
+.env
+.env.*
+!.env.example
+
+# 빌드 결과와 의존성 (Vercel에서 새로 설치·빌드)
+node_modules
+dist
+
+# 화면에서 쓰지 않는 예시 CSI 원본 데이터
+src/data/csi_raw
