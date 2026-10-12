@@ -45,7 +45,13 @@ import { useNow } from "../hooks/useNow";
 import { useReplay } from "../hooks/useReplay";
 import { formatClock } from "../utils/chartScale";
 import type { TimeView } from "../utils/chartScale";
-import { markersFromEvents, toActivityEvent, toCsvRecord } from "../utils/signalSeries";
+import {
+  isMovingNow,
+  lastActiveByEvent,
+  markersFromEvents,
+  toActivityEvent,
+  toCsvRecord,
+} from "../utils/signalSeries";
 import { formatDuration } from "../utils/nightMovementFormat";
 
 const GRAPH_HEIGHT = 250;
@@ -105,7 +111,20 @@ export default function NightMovementDashboardPage() {
   const replay = useReplay(csv.result?.analysisId ?? null, recordView);
 
   const apiEvents = mode === "realtime" ? live.events : (csv.result?.events ?? null);
-  const currentEvents = useMemo(() => apiEvents?.map(toActivityEvent) ?? null, [apiEvents]);
+  // 실시간 사건은 보호자 확인 전까지 열려 있으므로, "진행 중" 여부는 최근 판정 상태로 정한다
+  const liveMovingNow = isMovingNow(live.series);
+  const currentEvents = useMemo(() => {
+    if (!apiEvents) return null;
+    if (mode !== "realtime") return apiEvents.map((event) => toActivityEvent(event));
+    const lastActive = lastActiveByEvent(live.series);
+    const currentEventId = live.series?.eventId.findLast((id) => id !== null) ?? null;
+    return apiEvents.map((event) =>
+      toActivityEvent(event, {
+        movingNow: liveMovingNow && currentEventId === event.number,
+        lastActiveMs: lastActive.get(event.number),
+      }),
+    );
+  }, [apiEvents, mode, live.series, liveMovingNow]);
   const closeModal = () => setModal({ type: "none" });
 
   /* 실시간 */
@@ -305,7 +324,12 @@ export default function NightMovementDashboardPage() {
         {live.alert && (
           <S.Notice $tone="alert" role="alert">
             <strong>보호자 확인이 필요해요</strong>
-            <span>{live.alert.message}</span>
+            {/* 누운 것이 확인되면(움직임 멈춤) "이어지고 있습니다" 문구 대신 멈춤 안내 */}
+            <span>
+              {liveMovingNow
+                ? live.alert.message
+                : "움직임이 멈췄어요. 확인이 필요한 활동이 있으니 현장을 확인해 주세요."}
+            </span>
             <S.NoticeActions>
               <Button
                 type="button"

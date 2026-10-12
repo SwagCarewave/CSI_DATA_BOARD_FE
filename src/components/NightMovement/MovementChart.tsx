@@ -10,6 +10,7 @@ import { chartColors } from "../../styles/NightMovement/Charts";
 import { placeCallouts } from "../../utils/chartCallouts";
 import { formatClock, formatTick, rangeTicks, timeTicks } from "../../utils/chartScale";
 import type { TimeView } from "../../utils/chartScale";
+import { activityBands } from "../../utils/signalSeries";
 import type { ChartMarker, SignalSeries } from "../../utils/signalSeries";
 import ChartCallout from "./ChartCallout";
 import { useElementWidth } from "./useElementWidth";
@@ -67,6 +68,11 @@ export default function MovementChart({ series, markers, view, height, playheadM
     run.map((p, i) => `${i === 0 ? "M" : "L"}${toX(p.t).toFixed(1)},${toY(p.v).toFixed(1)}`).join("");
 
   const visibleMarkers = markers.filter((m) => m.endMs >= view.startMs && m.startMs <= view.endMs);
+  // 빨간 구간은 활동 지수가 0.95 이상인 시간만
+  const bands = useMemo(
+    () => activityBands(series).filter((band) => band.endMs >= view.startMs && band.startMs <= view.endMs),
+    [series, view.startMs, view.endMs],
+  );
   const callouts = placeCallouts(
     visibleMarkers.filter((m) => m.peakMs >= view.startMs && m.peakMs <= view.endMs),
     toX,
@@ -137,15 +143,15 @@ export default function MovementChart({ series, markers, view, height, playheadM
           ))}
           <line x1={plot.left} x2={plot.left} y1={plot.top} y2={plot.bottom} stroke={chartColors.axisText} strokeOpacity={0.5} />
 
-          {/* 활동 사건 구간 */}
-          {visibleMarkers.map((marker) => {
-            const x1 = Math.max(plot.left, toX(marker.startMs));
-            const x2 = Math.min(plot.right, toX(marker.endMs));
+          {/* 주요 움직임 구간: 활동 지수 0.95 이상인 시간 */}
+          {bands.map((band) => {
+            const x1 = Math.max(plot.left, toX(band.startMs));
+            const x2 = Math.min(plot.right, toX(band.endMs));
             const center = (x1 + x2) / 2;
-            const bandWidth = Math.max(8, x2 - x1);
+            const bandWidth = Math.max(4, x2 - x1);
             return (
               <rect
-                key={marker.key}
+                key={band.startMs}
                 x={center - bandWidth / 2}
                 y={plot.top}
                 width={bandWidth}
