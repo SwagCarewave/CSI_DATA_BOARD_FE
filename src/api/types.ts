@@ -190,3 +190,20 @@ export type ReplayMessage =
   | { type: "state"; replay: Replay }
   | { type: "tick"; replay: Replay; frames: Frame[] }
   | { type: "removed"; replay_id: string };
+
+/* 실시간 녹화 (API 24·25) */
+export type RecordingStatus = "none" | "recording" | "ready" | "too_long" | "empty" | "expired" | "failed";
+
+export interface Recording {
+  session_id: string;
+  status: RecordingStatus;
+  downloadable: boolean; // ready일 때만 true
+  packets: number;
+  duration_sec: number;
+  size_bytes: number | null;
+  started_at: UnixSeconds | null;
+  ended_at: UnixSeconds | null;
+  expires_at: UnixSeconds | null; // 이 시각이 지나면 파일 삭제 (ready일 때만)
+  max_duration_sec: number; // 넘으면 too_long (기본 15분)
+  keep_sec: number; // 종료 후 보관 시간 (기본 5분)
+}

@@ -140,3 +140,31 @@ export const ReceiverState = styled.span<{ $color: string }>`
   color: ${({ $color }) => $color};
   font-size: 10px;
 `;
+
+// CSV 추출 버튼: 시안처럼 바 오른쪽 끝 (오른쪽 여백 60px)
+export const ExportSlot = styled.div`
+  margin-left: auto;
+  margin-right: 59px;
+  flex-shrink: 0;
+
+  // 시안의 비활성 상태: 회색 배경 + 흰 글자
+  & > button:disabled {
+    background-color: ${cw.gray};
+    color: ${cw.white};
+  }
+
+  ${media.laptop} {
+    margin: 0;
+    align-self: center;
+    justify-self: start;
+  }
+
+  ${media.mobile} {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+
+    & > button {
+      width: 100%;
+    }
+  }
+`;

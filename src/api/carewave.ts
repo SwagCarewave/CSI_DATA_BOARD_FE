@@ -2,13 +2,14 @@
 
 // CareWave Motion State API 호출 (번호는 api_spec 항목 번호)
 
-import { apiRequest } from "./client";
+import { apiDownload, apiRequest } from "./client";
 import type {
   Analysis,
   ApiEvent,
   CsvFile,
   EventList,
   GuardianResult,
+  Recording,
   Replay,
   ReplaySpeed,
   Session,
@@ -74,3 +75,7 @@ export const updateReplay = (
   body: { action?: "play" | "pause"; position_ts?: number; speed?: ReplaySpeed },
 ) => apiRequest<Replay>(`/api/replays/${id}`, patch(body)); // 22
 export const replaySocketPath = (id: string) => `/ws/replays/${id}`; // 23
+
+/* 실시간 녹화 */
+export const getRecording = (sessionId: string) => apiRequest<Recording>(`/api/sessions/${sessionId}/recording`); // 24
+export const downloadRecordingCsv = (sessionId: string) => apiDownload(`/api/sessions/${sessionId}/recording/csv`); // 25
