@@ -74,3 +74,33 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
 
 export const errorMessage = (error: unknown) =>
   error instanceof ApiError ? error.message : "알 수 없는 오류가 발생했습니다.";
+
+// 파일 내려받기 (CSV 등). 실패하면 서버 오류 문구로 ApiError를 던진다.
+export async function apiDownload(path: string): Promise<{ blob: Blob; filename: string | null }> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`);
+  } catch {
+    throw new ApiError(0, "network_error", "서버에 연결할 수 없거나 서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+
+  if (!response.ok) {
+    let body: ApiErrorBody | null = null;
+    try {
+      body = (await response.json()) as ApiErrorBody;
+    } catch {
+      // 텍스트 오류 응답
+    }
+    throw new ApiError(
+      response.status,
+      body?.error?.code ?? `http_${response.status}`,
+      body?.error?.message ?? fallbackMessage(response.status),
+      body?.error?.detail ?? {},
+    );
+  }
+
+  // attachment; filename="csi_raw_live_20261013_231800.csv"
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const filename = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1] ?? null;
+  return { blob: await response.blob(), filename: filename ? decodeURIComponent(filename) : null };
+}

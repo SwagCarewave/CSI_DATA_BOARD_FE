@@ -42,6 +42,7 @@ import type { GraphRange } from "../data/nightMovement";
 import { useCsvFiles } from "../hooks/useCsvFiles";
 import { useLiveSession } from "../hooks/useLiveSession";
 import { useNow } from "../hooks/useNow";
+import { useRecording } from "../hooks/useRecording";
 import { useReplay } from "../hooks/useReplay";
 import { formatClock } from "../utils/chartScale";
 import type { TimeView } from "../utils/chartScale";
@@ -99,6 +100,7 @@ export default function NightMovementDashboardPage() {
   const now = useNow();
 
   const live = useLiveSession(rangeSeconds(realtimeRange));
+  const recording = useRecording(live.session, now);
   const csv = useCsvFiles();
 
   const selectedFile = csv.selected;
@@ -373,6 +375,15 @@ export default function NightMovementDashboardPage() {
               receivers={receivers}
               lastSignal={formatAgo(sinceLast)}
               signalCaption={signalCaption}
+              csvExport={{
+                enabled: recording.canDownload,
+                downloading: recording.downloading,
+                hint: recording.hint,
+                onClick: () => {
+                  setNotice(null);
+                  recording.download().catch((e) => setNotice(errorMessage(e)));
+                },
+              }}
             />
 
             <S.Row>
