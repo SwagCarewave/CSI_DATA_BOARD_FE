@@ -13,6 +13,7 @@ import MovementGraphCard from "../components/NightMovement/MovementGraphCard";
 import WifiHeatmapCard from "../components/NightMovement/WifiHeatmapCard";
 import MovementChart from "../components/NightMovement/MovementChart";
 import HeatmapChart from "../components/NightMovement/HeatmapChart";
+import MazeDirection from "../components/NightMovement/MazeDirection";
 import ActivityRecordsCard from "../components/NightMovement/ActivityRecordsCard";
 import RangeSelect from "../components/NightMovement/RangeSelect";
 import CsvToolbar from "../components/NightMovement/CsvToolbar";
@@ -45,7 +46,8 @@ import { useNow } from "../hooks/useNow";
 import { useRecording } from "../hooks/useRecording";
 import { useReplay } from "../hooks/useReplay";
 import { formatClock } from "../utils/chartScale";
-import type { TimeView } from "../utils/chartScale";
+import { SCROLLBAR_SPACE } from "../utils/chartScale";
+import type { ChartScroll, TimeView } from "../utils/chartScale";
 import {
   isMovingNow,
   lastActiveByEvent,
@@ -81,6 +83,18 @@ const playbackView = (record: TimeView, range: GraphRange, playheadMs: number): 
   return { startMs, endMs: startMs + length };
 };
 
+// 실시간: 한 화면에 보이는 시간. 새 신호가 오면 옛 구간은 왼쪽으로 밀려나고, 스크롤로 다시 볼 수 있다
+const LIVE_WINDOW_MS = 60 * 1000;
+// 오른쪽 끝에서 이만큼 안쪽이면 최신을 따라가는 것으로 본다
+const FOLLOW_SLACK_MS = 500;
+
+// anchorEndMs가 없으면 최신 구간, 있으면 그 시각에서 끝나는 구간 (기록 범위 안으로 맞춤)
+const slidingView = (total: TimeView, length: number, anchorEndMs: number | null): TimeView => {
+  if (total.endMs - total.startMs <= length) return { startMs: total.startMs, endMs: total.startMs + length };
+  const endMs = Math.min(total.endMs, Math.max(total.startMs + length, anchorEndMs ?? total.endMs));
+  return { startMs: endMs - length, endMs };
+};
+
 const formatAgo = (seconds: number | null) => {
   if (seconds === null) return "—";
   if (seconds < 60) return `${Math.max(0, Math.round(seconds))}초 전`;
@@ -93,6 +107,8 @@ export default function NightMovementDashboardPage() {
   const [modal, setModal] = useState<ModalState>({ type: "none" });
   const [notice, setNotice] = useState<string | null>(null);
   const [realtimeRange, setRealtimeRange] = useState<GraphRange>("10m");
+  // 실시간 그래프를 지난 구간으로 옮겼을 때 보이는 끝 시각 (null이면 최신을 따라감)
+  const [liveAnchor, setLiveAnchor] = useState<{ sessionId: string; endMs: number } | null>(null);
   const [csvRange, setCsvRange] = useState<GraphRange>("all");
   const [uploading, setUploading] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
@@ -134,11 +150,27 @@ export default function NightMovementDashboardPage() {
   const running = session?.status === "running";
   const liveSeries = live.series;
   const liveEndMs = liveSeries?.ts.at(-1) ?? (session ? (session.last_packet_at ?? session.started_at) * 1000 : now);
-  const liveView: TimeView = {
-    startMs: Math.max(session ? session.started_at * 1000 : 0, liveEndMs - rangeSeconds(realtimeRange) * 1000),
+  // 쌓인 기록 전체 (선택한 기간만큼) 중 LIVE_WINDOW_MS만 보여 준다
+  const liveTotal: TimeView = {
+    startMs: session ? Math.max(session.started_at * 1000, liveEndMs - rangeSeconds(realtimeRange) * 1000) : liveEndMs,
     endMs: liveEndMs,
   };
-  if (liveView.endMs - liveView.startMs < 10000) liveView.endMs = liveView.startMs + 10000; // 시작 직후에도 축이 보이게
+  const liveAnchorEnd = session && liveAnchor?.sessionId === session.id ? liveAnchor.endMs : null;
+  const liveView = slidingView(liveTotal, LIVE_WINDOW_MS, liveAnchorEnd);
+  // 끌기처럼 한 프레임에 여러 번 옮겨도 놓치지 않도록 직전 위치에서 이어 계산한다
+  const moveLiveView = (nextEnd: (currentEndMs: number) => number) => {
+    if (!session) return;
+    setLiveAnchor((prev) => {
+      const current = slidingView(liveTotal, LIVE_WINDOW_MS, prev?.sessionId === session.id ? prev.endMs : null);
+      const endMs = nextEnd(current.endMs);
+      return endMs >= liveTotal.endMs - FOLLOW_SLACK_MS ? null : { sessionId: session.id, endMs };
+    });
+  };
+  const liveScroll: ChartScroll = {
+    total: liveTotal,
+    onPan: (deltaMs) => moveLiveView((endMs) => endMs + deltaMs),
+    onScrollTo: (startMs) => moveLiveView(() => startMs + LIVE_WINDOW_MS),
+  };
   const liveMarkers = useMemo(() => markersFromEvents(live.events, now), [live.events, now]);
   const elapsedMs = session ? (running ? now - session.started_at * 1000 : session.elapsed_sec * 1000) : 0;
   const receivers = session?.rx.length
@@ -386,6 +418,8 @@ export default function NightMovementDashboardPage() {
               }}
             />
 
+            <MazeDirection running={running} steps={live.mazeSteps} status={live.mazeStatus} />
+
             <S.Row>
               <S.LeftColumn>
                 <ObservationSummary
@@ -404,11 +438,18 @@ export default function NightMovementDashboardPage() {
                 <MovementGraphCard
                   subtitle="시간에 따른 움직임의 강도를 분석한 결과입니다."
                   action={<RangeSelect value={realtimeRange} onChange={setRealtimeRange} />}
+                  chartMinWidth={0}
                   emptyText={live.loading ? "불러오는 중입니다" : "취침 모드를 켜면 관찰을 시작합니다"}
                   chart={
                     session &&
                     liveSeries && (
-                      <MovementChart series={liveSeries} markers={liveMarkers} view={liveView} height={GRAPH_HEIGHT} />
+                      <MovementChart
+                        series={liveSeries}
+                        markers={liveMarkers}
+                        view={liveView}
+                        height={GRAPH_HEIGHT}
+                        scroll={liveScroll}
+                      />
                     )
                   }
                 />
@@ -419,11 +460,18 @@ export default function NightMovementDashboardPage() {
             <S.Row>
               <WifiHeatmapCard
                 subtitle="RX1 · RX2 · RX3 신호를 함께 표시합니다."
+                chartMinWidth={0}
                 emptyText={live.loading ? "불러오는 중입니다" : "취침 모드를 켜면 관찰을 시작합니다"}
                 chart={
                   session &&
                   liveSeries && (
-                    <HeatmapChart series={liveSeries} markers={liveMarkers} view={liveView} height={HEATMAP_HEIGHT} />
+                    <HeatmapChart
+                      series={liveSeries}
+                      markers={liveMarkers}
+                      view={liveView}
+                      height={HEATMAP_HEIGHT + SCROLLBAR_SPACE}
+                      scroll={liveScroll}
+                    />
                   )
                 }
               />

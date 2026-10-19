@@ -12,6 +12,15 @@ export interface TimeView {
   endMs: number;
 }
 
+// 실시간 그래프 가로 이동: total은 쌓인 기록 전체, view는 그중 보이는 구간
+export interface ChartScroll {
+  total: TimeView;
+  onPan: (deltaMs: number) => void;
+  onScrollTo: (startMs: number) => void;
+}
+
+export const SCROLLBAR_SPACE = 14;
+
 // 화면 너비에 맞춰 가독성 있는 시간 눈금을 만든다 (현지 시각 기준으로 정각에 맞춤)
 export function timeTicks(view: TimeView, maxTicks: number) {
   const span = view.endMs - view.startMs;

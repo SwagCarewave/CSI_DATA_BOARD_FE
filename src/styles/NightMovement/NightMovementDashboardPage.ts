@@ -2,7 +2,7 @@
 
 import styled from "styled-components";
 
-import { cw, fontFamily, media } from "./tokens";
+import { Button, cw, fontFamily, media } from "./tokens";
 
 export const Page = styled.div`
   width: 100%;
@@ -85,11 +85,22 @@ export const ModeTabs = styled.nav`
   ${media.mobile} {
     width: 100%;
     margin-left: 0;
+    flex-wrap: wrap;
 
     & > button {
       flex: 1;
       width: auto;
     }
+  }
+`;
+
+// 헤더 "esp 게임 바로가기" (Secondary 버튼 모양의 링크). 모바일에서는 탭 아래 한 줄을 차지
+export const GameLink = styled(Button)`
+  text-decoration: none;
+
+  ${media.mobile} {
+    order: 1;
+    flex-basis: 100% !important;
   }
 `;
 

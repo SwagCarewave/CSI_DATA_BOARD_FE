@@ -16,6 +16,8 @@ interface MovementGraphCardProps {
   chart?: ReactNode;
   emptyText?: string;
   showGapNote?: boolean;
+  // 좁은 화면에서 그래프 최소 너비 (넘치면 카드 안에서 가로 스크롤). 그래프가 직접 시간 이동을 하면 0
+  chartMinWidth?: number;
 }
 
 export default function MovementGraphCard({
@@ -24,6 +26,7 @@ export default function MovementGraphCard({
   chart,
   emptyText = "움직임 그래프 영역",
   showGapNote = false,
+  chartMinWidth = 560,
 }: MovementGraphCardProps) {
   return (
     <S.ChartCard $emphasis $minHeight={340} aria-label="시간별 움직임 강도">
@@ -36,7 +39,7 @@ export default function MovementGraphCard({
       </S.ChartHeader>
 
       {chart ? (
-        <S.ChartBody $mt={BODY_TOP - HEADER_HEIGHT} $mobileMt={12} $scrollMinWidth={560}>
+        <S.ChartBody $mt={BODY_TOP - HEADER_HEIGHT} $mobileMt={12} $scrollMinWidth={chartMinWidth}>
           <S.ChartSlot>{chart}</S.ChartSlot>
         </S.ChartBody>
       ) : (

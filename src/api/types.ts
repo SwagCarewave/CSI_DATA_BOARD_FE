@@ -51,6 +51,8 @@ export interface Frame {
   signal_ok: boolean;
   packet_rate?: Record<string, number>;
   heatmap: number[] | null;
+  // 미로 방향 (테스트): 좌/우/상. 2초에 한 번만 오고 나머지 프레임·준비 중·신호 이상이면 null
+  direction_ko?: string | null;
 }
 
 export interface SignalEvent {
@@ -206,4 +208,23 @@ export interface Recording {
   expires_at: UnixSeconds | null; // 이 시각이 지나면 파일 삭제 (ready일 때만)
   max_duration_sec: number; // 넘으면 too_long (기본 15분)
   keep_sec: number; // 종료 후 보관 시간 (기본 5분)
+}
+
+/* 미로 게임 (API 26·27) */
+export interface MazeRecord {
+  id: string;
+  name: string;
+  minutes: number;
+  seconds: number;
+  duration_sec: number;
+  created_at: UnixSeconds;
+}
+
+export interface RankedMazeRecord extends MazeRecord {
+  rank: number; // 같은 시간이면 먼저 저장한 기록이 위
+}
+
+export interface MazeRecordList {
+  records: RankedMazeRecord[];
+  has_more: boolean;
 }

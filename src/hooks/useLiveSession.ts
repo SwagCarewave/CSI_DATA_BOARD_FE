@@ -15,7 +15,7 @@ import {
 } from "../api/carewave";
 import { errorMessage } from "../api/client";
 import { openSocket } from "../api/socket";
-import type { ApiEvent, Session, SessionMessage } from "../api/types";
+import type { ApiEvent, Frame, Session, SessionMessage } from "../api/types";
 import { appendFrames, seriesFromSignals } from "../utils/signalSeries";
 import type { SignalSeries } from "../utils/signalSeries";
 
@@ -23,6 +23,36 @@ export interface LiveAlert {
   eventId: string;
   message: string;
 }
+
+// 미로 방향 (테스트): 서버는 2초에 한 번만 direction_ko(좌/우/상)를 보내고 나머지 프레임은 null.
+// 값이 들어온 프레임만 한 걸음으로 쌓는다 (null 프레임은 무시 → 이전 글자 유지)
+export interface MazeStep {
+  id: number;
+  ts: number;
+  text: string;
+}
+
+// 가장 최근 프레임의 상태: 준비 중·신호 이상 표시용
+export interface MazeStatus {
+  state: string;
+  signalOk: boolean;
+}
+
+const MAZE_KEEP = 16; // 화면 15칸 + 왼쪽으로 빠져나가는 1칸
+
+const appendSteps = (prev: MazeStep[], frames: Frame[]) => {
+  const lastTs = prev.at(-1)?.ts ?? -Infinity;
+  const fresh = frames.filter((frame) => frame.direction_ko && frame.ts > lastTs).sort((a, b) => a.ts - b.ts);
+  if (fresh.length === 0) return prev;
+  let id = prev.at(-1)?.id ?? 0;
+  const steps = fresh.map((frame) => ({ id: ++id, ts: frame.ts, text: frame.direction_ko! }));
+  return [...prev, ...steps].slice(-MAZE_KEEP);
+};
+
+const latestStatus = (frames: Frame[]): MazeStatus | null => {
+  const last = frames.reduce<Frame | null>((latest, frame) => (!latest || frame.ts >= latest.ts ? frame : latest), null);
+  return last && { state: last.state, signalOk: last.signal_ok };
+};
 
 export function useLiveSession(windowSec: number) {
   const [session, setSession] = useState<Session | null>(null);
@@ -32,6 +62,8 @@ export function useLiveSession(windowSec: number) {
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [toggling, setToggling] = useState(false);
   const [alert, setAlert] = useState<LiveAlert | null>(null);
+  const [mazeSteps, setMazeSteps] = useState<MazeStep[]>([]);
+  const [mazeStatus, setMazeStatus] = useState<MazeStatus | null>(null);
 
   const sessionId = session?.id;
   const running = session?.status === "running";
@@ -60,14 +92,22 @@ export function useLiveSession(windowSec: number) {
     setEvents(list.items);
   }, []);
 
+  // 끝난 세션은 서버의 "최근 N초"(현재 시각 기준)로 물으면 비어 있으므로, 마지막 신호 시각까지의 구간으로 묻는다
+  const endedAt = session && session.status === "stopped" ? (session.last_packet_at ?? session.stopped_at) : null;
+  const startedAt = session?.started_at;
+
   // 세션·기간이 바뀌면 그래프와 활동 사건을 새로 불러온다
   useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
+    const range =
+      endedAt !== null && startedAt !== undefined
+        ? { from: Number.isFinite(windowSec) ? Math.max(startedAt, endedAt - windowSec) : startedAt, to: endedAt }
+        : { window: windowSec };
     (async () => {
       try {
         const [signals] = await Promise.all([
-          getSessionSignals(sessionId, { window: windowSec, max_points: 1200 }),
+          getSessionSignals(sessionId, { ...range, max_points: 1200 }),
           refreshEvents(sessionId),
         ]);
         if (!cancelled) setSeries(seriesFromSignals(signals));
@@ -78,7 +118,7 @@ export function useLiveSession(windowSec: number) {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, windowSec, refreshEvents]);
+  }, [sessionId, windowSec, endedAt, startedAt, refreshEvents]);
 
   // 관찰 중이면 WebSocket으로 판정·RX 상태·알림을 이어 받는다
   useEffect(() => {
@@ -91,9 +131,13 @@ export function useLiveSession(windowSec: number) {
           case "snapshot":
             setSession(message.session);
             setSeries((prev) => appendFrames(prev, message.frames, keepMs));
+            setMazeSteps((prev) => appendSteps(prev, message.frames));
+            setMazeStatus((prev) => latestStatus(message.frames) ?? prev);
             break;
           case "frames":
             setSeries((prev) => appendFrames(prev, message.frames, keepMs));
+            setMazeSteps((prev) => appendSteps(prev, message.frames));
+            setMazeStatus((prev) => latestStatus(message.frames) ?? prev);
             break;
           case "status":
             setSession((prev) =>
@@ -138,6 +182,8 @@ export function useLiveSession(windowSec: number) {
           setSeries(null);
           setEvents([]);
           setAlert(null);
+          setMazeSteps([]);
+          setMazeStatus(null);
         }
         setSession(started);
       } else if (session?.status === "running") {
@@ -164,6 +210,8 @@ export function useLiveSession(windowSec: number) {
     events,
     toggling,
     alert,
+    mazeSteps,
+    mazeStatus,
     dismissAlert: () => setAlert(null),
     setSleepMode,
     replaceEvent,
