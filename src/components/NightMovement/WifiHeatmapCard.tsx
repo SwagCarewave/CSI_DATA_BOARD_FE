@@ -13,9 +13,16 @@ interface WifiHeatmapCardProps {
   // 히트맵 (없으면 업로드 전 빈 상태)
   chart?: ReactNode;
   emptyText?: string;
+  // 좁은 화면에서 히트맵 최소 너비 (넘치면 카드 안에서 가로 스크롤). 히트맵이 직접 시간 이동을 하면 0
+  chartMinWidth?: number;
 }
 
-export default function WifiHeatmapCard({ subtitle, chart, emptyText = "CSI 히트맵 영역" }: WifiHeatmapCardProps) {
+export default function WifiHeatmapCard({
+  subtitle,
+  chart,
+  emptyText = "CSI 히트맵 영역",
+  chartMinWidth = 720,
+}: WifiHeatmapCardProps) {
   return (
     <S.ChartCard $emphasis $minHeight={207} aria-label="시간별 Wi-Fi 신호 변화">
       <S.ChartHeader $pt={11}>
@@ -26,7 +33,7 @@ export default function WifiHeatmapCard({ subtitle, chart, emptyText = "CSI 히�
       </S.ChartHeader>
 
       {chart ? (
-        <S.ChartBody $mt={4} $mobileMt={10} $scrollMinWidth={720}>
+        <S.ChartBody $mt={4} $mobileMt={10} $scrollMinWidth={chartMinWidth}>
           <S.ChartSlot>{chart}</S.ChartSlot>
         </S.ChartBody>
       ) : (

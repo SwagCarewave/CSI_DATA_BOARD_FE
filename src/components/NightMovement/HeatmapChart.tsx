@@ -8,11 +8,21 @@ import type { PointerEvent } from "react";
 import * as S from "../../styles/NightMovement/Charts";
 import { chartColors } from "../../styles/NightMovement/Charts";
 import { placeCallouts } from "../../utils/chartCallouts";
-import { formatClock, formatTick, jetColor, jetGradientStops, timeTicks, valueTicks } from "../../utils/chartScale";
-import type { TimeView } from "../../utils/chartScale";
+import {
+  SCROLLBAR_SPACE,
+  formatClock,
+  formatTick,
+  jetColor,
+  jetGradientStops,
+  timeTicks,
+  valueTicks,
+} from "../../utils/chartScale";
+import type { ChartScroll, TimeView } from "../../utils/chartScale";
 import type { ChartMarker, SignalSeries } from "../../utils/signalSeries";
 import ChartCallout from "./ChartCallout";
+import TimeScrollbar from "./TimeScrollbar";
 import { useElementWidth } from "./useElementWidth";
+import { usePan } from "./usePan";
 
 const PAD = { left: 84, right: 62, top: 14, bottom: 22 };
 
@@ -22,6 +32,8 @@ interface HeatmapChartProps {
   view: TimeView;
   height: number;
   playheadMs?: number;
+  // 실시간: 끌기·가로 휠·스크롤 막대로 지난 구간을 본다
+  scroll?: ChartScroll;
 }
 
 // 색 범위 상한: 보이는 값의 99번째 백분위를 5 단위로 올림
@@ -34,7 +46,7 @@ function colorMax(columns: (number[] | null)[]) {
   return Math.max(5, Math.ceil(values[Math.floor((values.length - 1) * 0.99)] / 5) * 5);
 }
 
-export default function HeatmapChart({ series, markers, view, height, playheadMs }: HeatmapChartProps) {
+export default function HeatmapChart({ series, markers, view, height, playheadMs, scroll }: HeatmapChartProps) {
   const [ref, width] = useElementWidth<HTMLDivElement>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<{ x: number; y: number; t: number; sub: number; value: number } | null>(null);
@@ -42,10 +54,12 @@ export default function HeatmapChart({ series, markers, view, height, playheadMs
 
   const { subcarrierCount, stepMs } = series;
   const span = Math.max(1, view.endMs - view.startMs);
-  const plot = { left: PAD.left, right: Math.max(PAD.left + 1, width - PAD.right), top: PAD.top, bottom: height - PAD.bottom };
+  const padBottom = PAD.bottom + (scroll ? SCROLLBAR_SPACE : 0);
+  const plot = { left: PAD.left, right: Math.max(PAD.left + 1, width - PAD.right), top: PAD.top, bottom: height - padBottom };
   const plotW = plot.right - plot.left;
   const plotH = plot.bottom - plot.top;
   const toX = (ms: number) => plot.left + ((ms - view.startMs) / span) * plotW;
+  const { panRef, panHandlers, dragMove, dragging, panEnabled } = usePan(scroll?.onPan, span / plotW);
 
   // 보이는 열의 인덱스
   const visible = useMemo(() => {
@@ -113,6 +127,10 @@ export default function HeatmapChart({ series, markers, view, height, playheadMs
   const showSeconds = span < 10 * 60 * 1000;
 
   const handlePointerMove = (e: PointerEvent<SVGRectElement>) => {
+    if (dragMove(e)) {
+      setHover(null);
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const px = e.clientX - rect.left;
     const py = e.clientY - rect.top;
@@ -219,11 +237,18 @@ export default function HeatmapChart({ series, markers, view, height, playheadMs
               width={plotW}
               height={plotH}
               fill="transparent"
+              ref={panRef}
+              style={panEnabled ? { cursor: dragging ? "grabbing" : "grab", touchAction: "pan-y" } : undefined}
+              {...panHandlers}
               onPointerMove={handlePointerMove}
               onPointerLeave={() => setHover(null)}
             />
           </S.Svg>
         </>
+      )}
+
+      {width > 0 && scroll && (
+        <TimeScrollbar total={scroll.total} view={view} left={plot.left} top={plot.bottom + 24} width={plotW} onScrollTo={scroll.onScrollTo} />
       )}
 
       {width > 0 && visible.length === 0 && <S.EmptyMessage>표시할 데이터가 없습니다</S.EmptyMessage>}

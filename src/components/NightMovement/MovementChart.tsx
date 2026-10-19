@@ -8,14 +8,17 @@ import type { PointerEvent } from "react";
 import * as S from "../../styles/NightMovement/Charts";
 import { chartColors } from "../../styles/NightMovement/Charts";
 import { placeCallouts } from "../../utils/chartCallouts";
-import { formatClock, formatTick, rangeTicks, timeTicks } from "../../utils/chartScale";
-import type { TimeView } from "../../utils/chartScale";
+import { SCROLLBAR_SPACE, formatClock, formatTick, rangeTicks, timeTicks } from "../../utils/chartScale";
+import type { ChartScroll, TimeView } from "../../utils/chartScale";
 import { activityBands } from "../../utils/signalSeries";
 import type { ChartMarker, SignalSeries } from "../../utils/signalSeries";
 import ChartCallout from "./ChartCallout";
+import TimeScrollbar from "./TimeScrollbar";
 import { useElementWidth } from "./useElementWidth";
+import { usePan } from "./usePan";
 
 const PAD = { left: 84, right: 14, top: 10, bottom: 50 };
+const LEGEND_WIDTH = 336;
 
 interface MovementChartProps {
   series: SignalSeries;
@@ -23,29 +26,36 @@ interface MovementChartProps {
   view: TimeView;
   height: number;
   playheadMs?: number;
+  // 실시간: 끌기·가로 휠·스크롤 막대로 지난 구간을 본다
+  scroll?: ChartScroll;
 }
 
-export default function MovementChart({ series, markers, view, height, playheadMs }: MovementChartProps) {
+export default function MovementChart({ series, markers, view, height, playheadMs, scroll }: MovementChartProps) {
   const [ref, width] = useElementWidth<HTMLDivElement>();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const gradientId = useId();
 
   const span = Math.max(1, view.endMs - view.startMs);
-  const plot = { left: PAD.left, right: Math.max(PAD.left + 1, width - PAD.right), top: PAD.top, bottom: height - PAD.bottom };
+  const padBottom = PAD.bottom + (scroll ? SCROLLBAR_SPACE : 0);
+  const plot = { left: PAD.left, right: Math.max(PAD.left + 1, width - PAD.right), top: PAD.top, bottom: height - padBottom };
   const plotW = plot.right - plot.left;
   const plotH = plot.bottom - plot.top;
   const toX = (ms: number) => plot.left + ((ms - view.startMs) / span) * plotW;
+  const { panRef, panHandlers, dragMove, dragging, panEnabled } = usePan(scroll?.onPan, span / plotW);
 
-  // 보이는 구간의 점
+  // 보이는 구간의 점 (선이 그래프 양 끝까지 이어지도록 바깥 점 하나씩 포함, 넘친 부분은 잘라 그린다)
   const points = useMemo(() => {
+    const first = series.ts.findIndex((t) => t >= view.startMs);
+    if (first < 0) return [];
+    const after = series.ts.findIndex((t) => t > view.endMs);
+    const end = after < 0 ? series.ts.length : after + 1;
     const list: { t: number; v: number }[] = [];
-    series.ts.forEach((t, i) => {
-      if (t >= view.startMs && t <= view.endMs) list.push({ t, v: series.activity[i] });
-    });
+    for (let i = Math.max(0, first - 1); i < end; i++) list.push({ t: series.ts[i], v: series.activity[i] });
     return list;
   }, [series, view.startMs, view.endMs]);
+  const inView = (t: number) => t >= view.startMs && t <= view.endMs;
 
-  const hasValues = points.some((p) => !Number.isNaN(p.v));
+  const hasValues = points.some((p) => !Number.isNaN(p.v) && inView(p.t));
   // 활동 지수는 확률(0~1)이므로 축을 고정한다
   const y = rangeTicks(0, 1);
   const threshold = series.threshold;
@@ -81,15 +91,21 @@ export default function MovementChart({ series, markers, view, height, playheadM
   );
   const x = timeTicks(view, Math.max(2, Math.floor(plotW / 84)));
   const showSeconds = span < 10 * 60 * 1000;
+  // 범례는 그래프 왼쪽 끝에 맞추되, 좁은 화면에서는 잘리지 않게 왼쪽으로 당긴다
+  const legendX = Math.max(0, Math.min(plot.left, width - LEGEND_WIDTH));
 
   const handlePointerMove = (e: PointerEvent<SVGRectElement>) => {
+    if (dragMove(e)) {
+      setHoverIndex(null);
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const t = view.startMs + ((e.clientX - rect.left) / rect.width) * span;
     let nearest = -1;
     let best = Infinity;
     points.forEach((p, i) => {
       const distance = Math.abs(p.t - t);
-      if (distance < best && !Number.isNaN(p.v)) {
+      if (distance < best && !Number.isNaN(p.v) && inView(p.t)) {
         best = distance;
         nearest = i;
       }
@@ -113,6 +129,9 @@ export default function MovementChart({ series, markers, view, height, playheadM
               <stop offset="0%" stopColor={chartColors.area} stopOpacity={0.28} />
               <stop offset="100%" stopColor={chartColors.area} stopOpacity={0.02} />
             </linearGradient>
+            <clipPath id={`${gradientId}-clip`}>
+              <rect x={plot.left} y={plot.top - 2} width={plotW} height={plotH + 4} />
+            </clipPath>
           </defs>
 
           {/* 배경 · 눈금 */}
@@ -181,6 +200,7 @@ export default function MovementChart({ series, markers, view, height, playheadM
           )}
 
           {/* 모델 활동 지수 */}
+          <g clipPath={`url(#${gradientId}-clip)`}>
           {filledRuns.map((run) =>
             run.length > 1 ? (
               <g key={run[0].t}>
@@ -194,6 +214,7 @@ export default function MovementChart({ series, markers, view, height, playheadM
               <circle key={run[0].t} cx={toX(run[0].t)} cy={toY(run[0].v)} r={2} fill={chartColors.line} />
             ),
           )}
+          </g>
 
           {/* 말풍선 · 점선 */}
           {callouts.map((callout) => (
@@ -218,7 +239,7 @@ export default function MovementChart({ series, markers, view, height, playheadM
           )}
 
           {/* 범례 */}
-          <g transform={`translate(${plot.left}, ${height - 10})`} fontSize={12} fill={chartColors.axisText}>
+          <g transform={`translate(${legendX}, ${height - 10})`} fontSize={12} fill={chartColors.axisText}>
             <line x1={0} x2={20} y1={-4} y2={-4} stroke={chartColors.line} strokeWidth={3} strokeLinecap="round" />
             <text x={28} y={0}>
               활동 지수
@@ -255,10 +276,17 @@ export default function MovementChart({ series, markers, view, height, playheadM
             width={plotW}
             height={plotH}
             fill="transparent"
+            ref={panRef}
+            style={panEnabled ? { cursor: dragging ? "grabbing" : "grab", touchAction: "pan-y" } : undefined}
+            {...panHandlers}
             onPointerMove={handlePointerMove}
             onPointerLeave={() => setHoverIndex(null)}
           />
         </S.Svg>
+      )}
+
+      {width > 0 && scroll && (
+        <TimeScrollbar total={scroll.total} view={view} left={plot.left} top={plot.bottom + 26} width={plotW} onScrollTo={scroll.onScrollTo} />
       )}
 
       {width > 0 && !hasValues && (

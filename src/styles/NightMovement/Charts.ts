@@ -71,6 +71,41 @@ export const Tooltip = styled.div`
   }
 `;
 
+// 실시간 그래프 가로 스크롤 막대
+export const ScrollTrack = styled.div`
+  position: absolute;
+  z-index: 2;
+  height: 8px;
+
+  border-radius: 4px;
+  background-color: ${cw.pale};
+  box-shadow: inset 0 0 0 1px ${cw.border};
+  cursor: pointer;
+  touch-action: none;
+
+  &:focus-visible {
+    outline: 2px solid ${cw.blue};
+    outline-offset: 2px;
+  }
+`;
+
+export const ScrollThumb = styled.div`
+  height: 100%;
+
+  border-radius: 4px;
+  background-color: ${cw.gray};
+  cursor: grab;
+
+  &:hover,
+  &:active {
+    background-color: ${cw.muted};
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+`;
+
 export const EmptyMessage = styled.p`
   position: absolute;
   inset: 0;

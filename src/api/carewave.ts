@@ -9,6 +9,8 @@ import type {
   CsvFile,
   EventList,
   GuardianResult,
+  MazeRecord,
+  MazeRecordList,
   Recording,
   Replay,
   ReplaySpeed,
@@ -79,3 +81,8 @@ export const replaySocketPath = (id: string) => `/ws/replays/${id}`; // 23
 /* 실시간 녹화 */
 export const getRecording = (sessionId: string) => apiRequest<Recording>(`/api/sessions/${sessionId}/recording`); // 24
 export const downloadRecordingCsv = (sessionId: string) => apiDownload(`/api/sessions/${sessionId}/recording/csv`); // 25
+
+/* 미로 게임 */
+export const saveMazeRecord = (body: { name: string; minutes: number; seconds: number }) =>
+  apiRequest<MazeRecord>("/api/maze/records", post(body)); // 26
+export const listMazeRecords = (limit?: number) => apiRequest<MazeRecordList>(`/api/maze/records${query({ limit })}`); // 27
