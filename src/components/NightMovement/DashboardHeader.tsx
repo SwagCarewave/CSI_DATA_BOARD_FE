@@ -1,5 +1,7 @@
 // src/components/NightMovement/DashboardHeader.tsx
 
+import { Link } from "react-router-dom";
+
 import * as S from "../../styles/NightMovement/NightMovementDashboardPage";
 import { Button } from "../../styles/NightMovement/tokens";
 
@@ -17,6 +19,9 @@ export default function DashboardHeader({ mode, onModeChange }: DashboardHeaderP
       <S.BoardTitle>야간 움직임 대시보드</S.BoardTitle>
 
       <S.ModeTabs aria-label="화면 선택">
+        <S.GameLink as={Link} to="/game" $variant="secondary">
+          esp 게임 바로가기
+        </S.GameLink>
         <Button
           type="button"
           $width={135}
