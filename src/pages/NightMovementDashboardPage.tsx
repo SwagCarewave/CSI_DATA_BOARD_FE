@@ -134,7 +134,8 @@ export default function NightMovementDashboardPage() {
     () => (selectedFile ? { startMs: recordStart, endMs: recordEnd } : null),
     [selectedFile, recordStart, recordEnd],
   );
-  const replay = useReplay(csv.result?.analysisId ?? null, recordView);
+  const replay = useReplay(csv.result?.analysisId ?? csv.poseAnalysisId, recordView);
+  const poseRecording = mode === "csv" && selectedFile?.kind === "mesh6";
 
   const apiEvents = mode === "realtime" ? live.events : (csv.result?.events ?? null);
   // 실시간 사건은 보호자 확인 전까지 열려 있으므로, "진행 중" 여부는 최근 판정 상태로 정한다
@@ -317,7 +318,24 @@ export default function NightMovementDashboardPage() {
     }
   };
 
-  const recordsCard = skeletonView ? (
+  const recordsCard = poseRecording ? (
+    <SkeletonLiveCard
+      onSelectEsp4={() => setSkeletonView(false)}
+      replay={{ model: replay.poseModel, current: replay.poseCurrent }}
+    />
+  ) : skeletonView && mode === "csv" ? (
+    <SkeletonLiveCard
+      onSelectEsp4={() => setSkeletonView(false)}
+      replay={{
+        model: null,
+        current: null,
+        notice: {
+          title: selectedFile ? "이 파일에는 스켈레톤이 없습니다." : "등록된 파일이 없습니다.",
+          caption: "ESP 6대 녹화 파일(.bin)을 올리면 스켈레톤을 재생할 수 있습니다.",
+        },
+      }}
+    />
+  ) : skeletonView ? (
     <SkeletonLiveCard onSelectEsp4={() => setSkeletonView(false)} />
   ) : (
     <ActivityRecordsCard
@@ -506,7 +524,7 @@ export default function NightMovementDashboardPage() {
 
             <S.Row>
               <div style={{ width: "100%" }}>
-                {csv.result && replay.ready ? (
+                {(csv.result || csv.poseAnalysisId) && replay.ready ? (
                   <CsvPlayback
                     start={new Date(recordStart)}
                     end={new Date(recordEnd)}
@@ -534,7 +552,7 @@ export default function NightMovementDashboardPage() {
                 <MovementGraphCard
                   subtitle="재생 시각에 맞춰 움직임 그래프와 CSI 히트맵이 함께 갱신됩니다."
                   action={<RangeSelect variant="button" value={csvRange} onChange={setCsvRange} />}
-                  emptyText="분석 후 그래프가 표시됩니다"
+                  emptyText={poseRecording ? "ESP 6대 녹화는 스켈레톤 재생만 제공합니다" : "분석 후 그래프가 표시됩니다"}
                   chart={
                     csv.result &&
                     csvView && (
@@ -555,7 +573,7 @@ export default function NightMovementDashboardPage() {
             <S.Row>
               <WifiHeatmapCard
                 subtitle="같은 재생 시각의 RX 신호를 표시합니다. 수신 공백은 빈 구간으로 표시합니다."
-                emptyText="분석 후 히트맵이 표시됩니다"
+                emptyText={poseRecording ? "ESP 6대 녹화는 스켈레톤 재생만 제공합니다" : "분석 후 히트맵이 표시됩니다"}
                 chart={
                   csv.result &&
                   csvView && (

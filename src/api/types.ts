@@ -192,8 +192,8 @@ export interface Replay {
 }
 
 export type ReplayMessage =
-  | { type: "state"; replay: Replay }
-  | { type: "tick"; replay: Replay; frames: Frame[] }
+  | { type: "state"; replay: Replay; model?: PoseDrawModel | null; current?: PoseReplayFrame | null }
+  | { type: "tick"; replay: Replay; frames: Frame[]; current?: PoseReplayFrame | null }
   | { type: "removed"; replay_id: string };
 
 /* 실시간 녹화 (API 24·25) */
@@ -309,3 +309,5 @@ export interface PoseModelItem {
 }
 
 export type PoseDrawModel = Pick<PoseModel, "points" | "skeleton" | "image_size"> & Partial<PoseModel>;
+
+export type PoseReplayFrame = Omit<PoseFrame, "model" | "points" | "probabilities">;

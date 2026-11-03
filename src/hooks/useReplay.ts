@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { createReplay, replaySocketPath, updateReplay } from "../api/carewave";
 import { openSocket } from "../api/socket";
-import type { Replay, ReplayMessage, ReplaySpeed } from "../api/types";
+import type { PoseDrawModel, PoseReplayFrame, Replay, ReplayMessage, ReplaySpeed } from "../api/types";
 
 interface LocalPlayback {
   analysisId: string;
@@ -24,6 +24,9 @@ export function useReplay(analysisId: string | null, range: { startMs: number; e
   const [fallbackFor, setFallbackFor] = useState<string | null>(null);
   const [local, setLocal] = useState<LocalPlayback | null>(null);
   const [recreateKey, setRecreateKey] = useState(0);
+  const [pose, setPose] = useState<{ analysisId: string; model: PoseDrawModel | null; current: PoseReplayFrame | null } | null>(
+    null,
+  );
   const seekTimer = useRef<number | undefined>(undefined);
 
   const startMs = range?.startMs ?? 0;
@@ -49,6 +52,12 @@ export function useReplay(analysisId: string | null, range: { startMs: number; e
         close = openSocket<ReplayMessage>(replaySocketPath(created.id), {
           onMessage: (message) => {
             if (message.type === "state" || message.type === "tick") setReplay(message.replay);
+            if (message.type === "state" && message.model !== undefined) {
+              setPose({ analysisId, model: message.model, current: message.current ?? null });
+            } else if ((message.type === "state" || message.type === "tick") && message.current !== undefined) {
+              const current = message.current;
+              setPose((prev) => (prev?.analysisId === analysisId ? { ...prev, current } : prev));
+            }
           },
           // 서버 재시작 등으로 재생이 사라지면(4404) 다시 만든다
           onFinalClose: (code) => {
@@ -138,5 +147,7 @@ export function useReplay(analysisId: string | null, range: { startMs: number; e
     togglePlay,
     seek,
     setSpeed,
+    poseModel: pose?.analysisId === analysisId ? pose.model : null,
+    poseCurrent: pose?.analysisId === analysisId ? pose.current : null,
   };
 }
