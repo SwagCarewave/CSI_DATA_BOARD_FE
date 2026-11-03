@@ -17,6 +17,7 @@ import ResultScreen from "../components/ChristmasGame/ResultScreen";
 import Stage from "../components/ChristmasGame/Stage";
 import { useCsvReplayFeed } from "../hooks/useCsvReplayFeed";
 import { useEspFeed } from "../hooks/useEspFeed";
+import { usePoseFeed } from "../hooks/usePoseFeed";
 import type { EspLevel, EspScore } from "../hooks/useEspFeed";
 import { GameFonts } from "../styles/ChristmasGame/common";
 
@@ -40,7 +41,19 @@ export default function ChristmasGamePage() {
 
 function EspGame() {
   const esp = useEspFeed();
-  return <GameFlow level={esp.level} score={esp.score} />;
+  const poseActive = usePoseFeed((s) => s.linksOk > 0);
+  const poseReady = usePoseFeed((s) => s.ready);
+  const poseScore = usePoseFeed((s) => s.score);
+  const calibrating = usePoseFeed((s) => (s.calibration?.active ? Math.round(s.calibration.progress * 100) : null));
+
+  if (!poseActive) return <GameFlow level={esp.level} score={esp.score} />;
+  return (
+    <GameFlow
+      level={poseReady ? "green" : "orange"}
+      score={poseScore}
+      sourceNote={calibrating !== null ? `ESP 6대 보정 중 ${calibrating}% · 서서 가만히 있어 주세요` : "ESP 6대 연결"}
+    />
+  );
 }
 
 function CsvGame({ file }: { file: string }) {
