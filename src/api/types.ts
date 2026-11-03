@@ -193,7 +193,7 @@ export interface Replay {
 
 export type ReplayMessage =
   | { type: "state"; replay: Replay; model?: PoseDrawModel | null; current?: PoseReplayFrame | null }
-  | { type: "tick"; replay: Replay; frames: Frame[]; current?: PoseReplayFrame | null }
+  | { type: "tick"; replay: Replay; frames: Frame[]; poses?: PoseReplayFrame[]; current?: PoseReplayFrame | null }
   | { type: "removed"; replay_id: string };
 
 /* 실시간 녹화 (API 24·25) */

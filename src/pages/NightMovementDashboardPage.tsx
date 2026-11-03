@@ -560,7 +560,7 @@ export default function NightMovementDashboardPage() {
                 <MovementGraphCard
                   subtitle="재생 시각에 맞춰 움직임 그래프와 CSI 히트맵이 함께 갱신됩니다."
                   action={<RangeSelect variant="button" value={csvRange} onChange={setCsvRange} />}
-                  emptyText={poseRecording ? "ESP 6대 녹화는 스켈레톤 재생만 제공합니다" : "분석 후 그래프가 표시됩니다"}
+                  emptyText="분석 후 그래프가 표시됩니다"
                   chart={
                     csv.result &&
                     csvView && (
@@ -581,7 +581,7 @@ export default function NightMovementDashboardPage() {
             <S.Row>
               <WifiHeatmapCard
                 subtitle="같은 재생 시각의 RX 신호를 표시합니다. 수신 공백은 빈 구간으로 표시합니다."
-                emptyText={poseRecording ? "ESP 6대 녹화는 스켈레톤 재생만 제공합니다" : "분석 후 히트맵이 표시됩니다"}
+                emptyText="분석 후 히트맵이 표시됩니다"
                 chart={
                   csv.result &&
                   csvView && (

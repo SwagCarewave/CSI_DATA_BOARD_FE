@@ -94,7 +94,7 @@ export function useCsvFiles() {
           if (!cancel.current) await refreshFiles();
           return;
         }
-        if (latestStatus !== "succeeded" || isPose) return;
+        if (latestStatus !== "succeeded") return;
 
         const [signals, events] = await Promise.all([
           getAnalysisSignals(latestId, { max_points: 3600 }),
@@ -111,7 +111,7 @@ export function useCsvFiles() {
     return () => {
       cancel.current = true;
     };
-  }, [latestId, latestStatus, isPose, refreshFiles]);
+  }, [latestId, latestStatus, refreshFiles]);
 
   // CSV 업로드 (서버가 형식 검사 후 등록)
   const upload = async (file: File) => {
