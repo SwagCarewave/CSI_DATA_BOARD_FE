@@ -512,6 +512,7 @@ export default function NightMovementDashboardPage() {
                       view={liveView}
                       height={HEATMAP_HEIGHT + SCROLLBAR_SPACE}
                       scroll={liveScroll}
+                      fitRange={showPoseGraph}
                     />
                   )
                 }
@@ -591,6 +592,7 @@ export default function NightMovementDashboardPage() {
                       view={csvView}
                       height={HEATMAP_HEIGHT}
                       playheadMs={replay.ready ? replay.positionMs : undefined}
+                      fitRange={poseRecording}
                     />
                   )
                 }

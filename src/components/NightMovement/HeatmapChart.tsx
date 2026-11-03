@@ -34,6 +34,8 @@ interface HeatmapChartProps {
   playheadMs?: number;
   // 실시간: 끌기·가로 휠·스크롤 막대로 지난 구간을 본다
   scroll?: ChartScroll;
+  // ESP 6대: 30개 선 평균이라 값이 좁은 범위에 몰리므로 색 범위를 0~최댓값 대신 실제 값 범위로 잡는다
+  fitRange?: boolean;
 }
 
 // 색 범위 상한: 보이는 값의 99번째 백분위를 5 단위로 올림
@@ -46,7 +48,20 @@ function colorMax(columns: (number[] | null)[]) {
   return Math.max(5, Math.ceil(values[Math.floor((values.length - 1) * 0.99)] / 5) * 5);
 }
 
-export default function HeatmapChart({ series, markers, view, height, playheadMs, scroll }: HeatmapChartProps) {
+// 색 범위를 실제 값의 1~99번째 백분위로: 좁게 몰린 값도 파랑~빨강으로 구분되게 한다
+function colorRange(columns: (number[] | null)[]): [number, number] {
+  const values: number[] = [];
+  const stride = Math.max(1, Math.floor(columns.length / 400));
+  for (let i = 0; i < columns.length; i += stride) columns[i]?.forEach((v) => Number.isFinite(v) && values.push(v));
+  if (values.length === 0) return [0, 20];
+  values.sort((a, b) => a - b);
+  const lo = values[Math.floor((values.length - 1) * 0.01)];
+  const hi = values[Math.floor((values.length - 1) * 0.99)];
+  const mid = (lo + hi) / 2;
+  return hi - lo < 1 ? [mid - 0.5, mid + 0.5] : [lo, hi];
+}
+
+export default function HeatmapChart({ series, markers, view, height, playheadMs, scroll, fitRange = false }: HeatmapChartProps) {
   const [ref, width] = useElementWidth<HTMLDivElement>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<{ x: number; y: number; t: number; sub: number; value: number } | null>(null);
@@ -70,7 +85,11 @@ export default function HeatmapChart({ series, markers, view, height, playheadMs
     return indices;
   }, [series, stepMs, view.startMs, view.endMs]);
 
-  const maxValue = useMemo(() => colorMax(visible.map((i) => series.heatmap[i])), [series, visible]);
+  const [minValue, maxValue] = useMemo<[number, number]>(() => {
+    const columns = visible.map((i) => series.heatmap[i]);
+    return fitRange ? colorRange(columns) : [0, colorMax(columns)];
+  }, [series, visible, fitRange]);
+  const colorSpan = Math.max(1e-6, maxValue - minValue);
 
   // 히트맵 칸 그리기: 열마다 그 시각 위치에 그린다 (빈 열은 비워 둠)
   useEffect(() => {
@@ -99,7 +118,7 @@ export default function HeatmapChart({ series, markers, view, height, playheadMs
       for (let k = 0; k < subcarrierCount; k++) {
         const value = values[k];
         if (!Number.isFinite(value)) continue;
-        const [r, g, b] = jetColor(value / maxValue);
+        const [r, g, b] = jetColor((value - minValue) / colorSpan);
         image.data.set([r, g, b, 255], ((subcarrierCount - 1 - k) * visible.length + column) * 4); // 0번이 아래
       }
     });
@@ -112,15 +131,17 @@ export default function HeatmapChart({ series, markers, view, height, playheadMs
       const x = ((series.ts[index] - view.startMs) / span) * plotW - columnWidth / 2;
       ctx.drawImage(offscreen, column, 0, 1, subcarrierCount, x, 0, columnWidth + 0.5, plotH);
     });
-  }, [series, visible, maxValue, subcarrierCount, stepMs, plotW, plotH, span, view.startMs, width]);
+  }, [series, visible, minValue, colorSpan, subcarrierCount, stepMs, plotW, plotH, span, view.startMs, width]);
 
   const x = timeTicks(view, Math.max(2, Math.floor(plotW / 84)));
   // 시안처럼 10 단위 (서브캐리어가 적으면 5 단위)
   const subStep = subcarrierCount > 30 ? 10 : 5;
   const subTicks = Array.from({ length: Math.floor((subcarrierCount - 1) / subStep) + 1 }, (_, i) => i * subStep);
-  const colorTicks = valueTicks(maxValue).ticks.filter((tick) => tick <= maxValue);
+  const colorTicks = fitRange
+    ? Array.from({ length: 5 }, (_, i) => Number((minValue + (colorSpan * i) / 4).toFixed(1)))
+    : valueTicks(maxValue).ticks.filter((tick) => tick <= maxValue);
   const toSubY = (sub: number) => plot.bottom - ((sub + 0.5) / subcarrierCount) * plotH;
-  const toColorY = (value: number) => plot.bottom - (value / maxValue) * plotH;
+  const toColorY = (value: number) => plot.bottom - ((value - minValue) / colorSpan) * plotH;
 
   const visibleMarkers = markers.filter((m) => m.peakMs >= view.startMs && m.peakMs <= view.endMs);
   const callouts = plotH > 70 ? placeCallouts(visibleMarkers, toX, plot, 1) : [];
