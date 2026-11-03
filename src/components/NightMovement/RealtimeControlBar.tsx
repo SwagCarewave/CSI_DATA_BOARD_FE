@@ -17,8 +17,9 @@ interface RealtimeControlBarProps {
   receivers: Receiver[];
   lastSignal: string;
   signalCaption: string;
-  // 실시간 녹화 CSV 추출 (관찰 종료 후에만 활성)
+  // 실시간 녹화 추출 (관찰 종료 후에만 활성). 4대는 CSV, 6대는 BIN
   csvExport: {
+    label: string;
     enabled: boolean;
     downloading: boolean;
     hint: string;
@@ -90,7 +91,7 @@ export default function RealtimeControlBar({
           aria-describedby="csv-export-hint"
           onClick={csvExport.onClick}
         >
-          {csvExport.downloading ? "받는 중" : "CSV 추출"}
+          {csvExport.downloading ? "받는 중" : `${csvExport.label} 추출`}
         </Button>
         <VisuallyHidden id="csv-export-hint">{csvExport.hint}</VisuallyHidden>
       </S.ExportSlot>

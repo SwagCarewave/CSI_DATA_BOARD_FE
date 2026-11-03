@@ -78,13 +78,19 @@ export function useRecording(session: Session | null, nowMs: number) {
 
   const expired = !!current?.expires_at && nowMs >= current.expires_at * 1000;
   const canDownload = sessionStatus === "stopped" && !!current?.downloadable && !expired;
+  // ESP 6대 녹화는 .bin (기록 조회에 그대로 올리면 스켈레톤·그래프), 4대는 CSV
+  const format = current?.format === "bin" ? "bin" : "csv";
+  const fileLabel = format === "bin" ? "BIN" : "CSV";
 
   let hint: string;
   if (!session) hint = "관찰 모드 관찰을 마치면 CSV를 받을 수 있습니다.";
   else if (sessionStatus === "running") hint = unavailableHint.recording;
   else if (canDownload && current?.expires_at) {
     const minutesLeft = Math.max(1, Math.ceil((current.expires_at * 1000 - nowMs) / 60000));
-    hint = `이번 관찰의 CSI 원본 CSV를 받습니다. 약 ${minutesLeft}분 뒤 삭제됩니다.`;
+    hint =
+      format === "bin"
+        ? `이번 관찰의 ESP 6대 원본(.bin)을 받습니다. 기록 조회에 올리면 스켈레톤을 다시 볼 수 있습니다. 약 ${minutesLeft}분 뒤 삭제됩니다.`
+        : `이번 관찰의 CSI 원본 CSV를 받습니다. 약 ${minutesLeft}분 뒤 삭제됩니다.`;
   } else if (expired) hint = unavailableHint.expired;
   else hint = (current && unavailableHint[current.status]) ?? "녹화 상태를 확인하는 중입니다.";
 
@@ -94,7 +100,7 @@ export function useRecording(session: Session | null, nowMs: number) {
     setDownloading(true);
     try {
       const { blob, filename } = await downloadRecordingCsv(sessionId);
-      saveFile(blob, filename ?? `csi_raw_live_${sessionId.slice(0, 8)}.csv`);
+      saveFile(blob, filename ?? `csi_raw_live_${sessionId.slice(0, 8)}.${format}`);
     } catch (e) {
       refresh(sessionId);
       throw e;
@@ -103,5 +109,5 @@ export function useRecording(session: Session | null, nowMs: number) {
     }
   };
 
-  return { canDownload, downloading, hint, download };
+  return { canDownload, downloading, hint, download, fileLabel };
 }

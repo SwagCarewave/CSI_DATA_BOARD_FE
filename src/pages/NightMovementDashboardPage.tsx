@@ -457,6 +457,7 @@ export default function NightMovementDashboardPage() {
               lastSignal={formatAgo(sinceLast)}
               signalCaption={signalCaption}
               csvExport={{
+                label: recording.fileLabel,
                 enabled: recording.canDownload,
                 downloading: recording.downloading,
                 hint: recording.hint,

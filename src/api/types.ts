@@ -203,6 +203,7 @@ export interface Recording {
   session_id: string;
   status: RecordingStatus;
   downloadable: boolean; // ready일 때만 true
+  format: "csv" | "bin" | null; // ESP 4대 CSV / ESP 6대 .bin (녹화가 없으면 null)
   packets: number;
   duration_sec: number;
   size_bytes: number | null;
