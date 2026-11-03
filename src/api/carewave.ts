@@ -11,6 +11,9 @@ import type {
   GuardianResult,
   MazeRecord,
   MazeRecordList,
+  PoseCalibration,
+  PoseModel,
+  PoseModelItem,
   Recording,
   Replay,
   ReplaySpeed,
@@ -86,3 +89,9 @@ export const downloadRecordingCsv = (sessionId: string) => apiDownload(`/api/ses
 export const saveMazeRecord = (body: { name: string; minutes: number; seconds: number }) =>
   apiRequest<MazeRecord>("/api/maze/records", post(body)); // 26
 export const listMazeRecords = (limit?: number) => apiRequest<MazeRecordList>(`/api/maze/records${query({ limit })}`); // 27
+
+export const recalibratePose = () => apiRequest<PoseCalibration>("/api/pose/calibration", post());
+export const poseSocketPath = "/ws/pose";
+export const listPoseModels = () => apiRequest<PoseModelItem[]>("/api/pose/models");
+export const setActivePoseModel = (name: string) =>
+  apiRequest<PoseModel>("/api/pose/models/active", { method: "PUT", body: JSON.stringify({ name }) });
