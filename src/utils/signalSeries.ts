@@ -84,6 +84,20 @@ export function appendFrames(series: SignalSeries | null, frames: Frame[], keepM
   };
 }
 
+// 시작·끝 시각(ms) 사이의 점만 남긴다 (6대 그래프를 취침 모드 구간으로 자를 때)
+export function sliceSeries(series: SignalSeries, startMs: number, endMs = Infinity): SignalSeries {
+  const keep = series.ts.map((t) => t >= startMs && t <= endMs);
+  const pick = <T,>(values: T[]) => values.filter((_, i) => keep[i]);
+  return {
+    ...series,
+    ts: pick(series.ts),
+    activity: pick(series.activity),
+    heatmap: pick(series.heatmap),
+    state: pick(series.state),
+    eventId: pick(series.eventId),
+  };
+}
+
 // 빨간 "주요 움직임 구간": 활동 지수(움직임 수준)가 이 값 이상인 시간만 칠한다
 export const HIGHLIGHT_LEVEL = 0.95;
 

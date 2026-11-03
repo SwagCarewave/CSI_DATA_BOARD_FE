@@ -56,6 +56,7 @@ import {
   isMovingNow,
   lastActiveByEvent,
   markersFromEvents,
+  sliceSeries,
   toActivityEvent,
   toCsvRecord,
 } from "../utils/signalSeries";
@@ -159,12 +160,20 @@ export default function NightMovementDashboardPage() {
   /* 실시간 */
   const session = live.session;
   const running = session?.status === "running";
-  const showPoseGraph = !!poseSeries && poseSeries.ts.length > 0;
-  const liveSeries = showPoseGraph ? poseSeries : live.series;
+  // 6대 그래프도 4대처럼 취침 모드 구간(켠 시각 ~ 끈 시각)만 보여 준다. 스켈레톤은 취침 모드와 상관없이 항상 표시
+  const poseSessionSeries = useMemo(
+    () =>
+      poseSeries && session
+        ? sliceSeries(poseSeries, session.started_at * 1000, session.stopped_at ? session.stopped_at * 1000 : Infinity)
+        : null,
+    [poseSeries, session],
+  );
+  const showPoseGraph = !!poseSessionSeries && poseSessionSeries.ts.length > 0;
+  const liveSeries = showPoseGraph ? poseSessionSeries : live.series;
   const liveViewKey = showPoseGraph ? "pose" : (session?.id ?? null);
   const liveEndMs = liveSeries?.ts.at(-1) ?? (session ? (session.last_packet_at ?? session.started_at) * 1000 : now);
   // 쌓인 기록 전체 (선택한 기간만큼) 중 LIVE_WINDOW_MS만 보여 준다
-  const liveStartMs = showPoseGraph ? poseSeries.ts[0] : session ? session.started_at * 1000 : null;
+  const liveStartMs = showPoseGraph ? poseSessionSeries.ts[0] : session ? session.started_at * 1000 : null;
   const liveTotal: TimeView = {
     startMs: liveStartMs !== null ? Math.max(liveStartMs, liveEndMs - rangeSeconds(realtimeRange) * 1000) : liveEndMs,
     endMs: liveEndMs,
