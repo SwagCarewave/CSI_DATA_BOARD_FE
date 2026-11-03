@@ -293,7 +293,8 @@ export interface PoseLinkState {
 }
 
 export type PoseMessage =
-  | ({ type: "snapshot"; model: PoseModel; latest: PoseFrame | null; recent: PoseFrame[] } & PoseLinkState)
+  | ({ type: "snapshot"; model: PoseModel; latest: PoseFrame | null; recent: PoseFrame[]; frames?: Frame[] } & PoseLinkState)
+  | { type: "frames"; frames: Frame[] }
   | ({ type: "pose" } & PoseFrame)
   | ({ type: "links" } & PoseLinkState)
   | { type: "calibration"; calibration: PoseCalibration }

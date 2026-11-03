@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 
 import { poseSocketPath } from "../api/carewave";
 import { openSocket } from "../api/socket";
-import type { PoseCalibration, PoseFrame, PoseLink, PoseLinkState, PoseMessage, PoseModel } from "../api/types";
+import type { Frame, PoseCalibration, PoseFrame, PoseLink, PoseLinkState, PoseMessage, PoseModel } from "../api/types";
 import type { EspScore } from "./useEspFeed";
 
 export interface PoseState {
@@ -39,6 +39,7 @@ const initialState: PoseState = {
 
 let state = initialState;
 const listeners = new Set<() => void>();
+const frameListeners = new Set<(frames: Frame[]) => void>();
 let closeSocket: (() => void) | null = null;
 
 const update = (next: Partial<PoseState>) => {
@@ -59,6 +60,10 @@ const handleMessage = (m: PoseMessage) => {
   switch (m.type) {
     case "snapshot":
       update({ ...fromLinks(m), connected: true, unavailable: false, model: m.model, pose: m.latest });
+      if (m.frames?.length) frameListeners.forEach((listener) => listener(m.frames!));
+      break;
+    case "frames":
+      frameListeners.forEach((listener) => listener(m.frames));
       break;
     case "pose": {
       const now = Date.now();
@@ -101,4 +106,11 @@ const subscribe = (listener: () => void) => {
 
 export function usePoseFeed<T>(selector: (s: PoseState) => T): T {
   return useSyncExternalStore(subscribe, () => selector(state));
+}
+
+export function subscribePoseFrames(listener: (frames: Frame[]) => void) {
+  frameListeners.add(listener);
+  return () => {
+    frameListeners.delete(listener);
+  };
 }

@@ -46,6 +46,7 @@ import { useCsvFiles } from "../hooks/useCsvFiles";
 import { useLiveSession } from "../hooks/useLiveSession";
 import { useNow } from "../hooks/useNow";
 import { usePoseFeed } from "../hooks/usePoseFeed";
+import { usePoseSignals } from "../hooks/usePoseSignals";
 import { useRecording } from "../hooks/useRecording";
 import { useReplay } from "../hooks/useReplay";
 import { formatClock } from "../utils/chartScale";
@@ -124,6 +125,7 @@ export default function NightMovementDashboardPage() {
   const now = useNow();
 
   const live = useLiveSession(rangeSeconds(realtimeRange));
+  const poseSeries = usePoseSignals(rangeSeconds(realtimeRange));
   const recording = useRecording(live.session, now);
   const csv = useCsvFiles();
 
@@ -157,22 +159,25 @@ export default function NightMovementDashboardPage() {
   /* 실시간 */
   const session = live.session;
   const running = session?.status === "running";
-  const liveSeries = live.series;
+  const showPoseGraph = !!poseSeries && poseSeries.ts.length > 0;
+  const liveSeries = showPoseGraph ? poseSeries : live.series;
+  const liveViewKey = showPoseGraph ? "pose" : (session?.id ?? null);
   const liveEndMs = liveSeries?.ts.at(-1) ?? (session ? (session.last_packet_at ?? session.started_at) * 1000 : now);
   // 쌓인 기록 전체 (선택한 기간만큼) 중 LIVE_WINDOW_MS만 보여 준다
+  const liveStartMs = showPoseGraph ? poseSeries.ts[0] : session ? session.started_at * 1000 : null;
   const liveTotal: TimeView = {
-    startMs: session ? Math.max(session.started_at * 1000, liveEndMs - rangeSeconds(realtimeRange) * 1000) : liveEndMs,
+    startMs: liveStartMs !== null ? Math.max(liveStartMs, liveEndMs - rangeSeconds(realtimeRange) * 1000) : liveEndMs,
     endMs: liveEndMs,
   };
-  const liveAnchorEnd = session && liveAnchor?.sessionId === session.id ? liveAnchor.endMs : null;
+  const liveAnchorEnd = liveViewKey && liveAnchor?.sessionId === liveViewKey ? liveAnchor.endMs : null;
   const liveView = slidingView(liveTotal, LIVE_WINDOW_MS, liveAnchorEnd);
   // 끌기처럼 한 프레임에 여러 번 옮겨도 놓치지 않도록 직전 위치에서 이어 계산한다
   const moveLiveView = (nextEnd: (currentEndMs: number) => number) => {
-    if (!session) return;
+    if (!liveViewKey) return;
     setLiveAnchor((prev) => {
-      const current = slidingView(liveTotal, LIVE_WINDOW_MS, prev?.sessionId === session.id ? prev.endMs : null);
+      const current = slidingView(liveTotal, LIVE_WINDOW_MS, prev?.sessionId === liveViewKey ? prev.endMs : null);
       const endMs = nextEnd(current.endMs);
-      return endMs >= liveTotal.endMs - FOLLOW_SLACK_MS ? null : { sessionId: session.id, endMs };
+      return endMs >= liveTotal.endMs - FOLLOW_SLACK_MS ? null : { sessionId: liveViewKey, endMs };
     });
   };
   const liveScroll: ChartScroll = {
@@ -180,7 +185,10 @@ export default function NightMovementDashboardPage() {
     onPan: (deltaMs) => moveLiveView((endMs) => endMs + deltaMs),
     onScrollTo: (startMs) => moveLiveView(() => startMs + LIVE_WINDOW_MS),
   };
-  const liveMarkers = useMemo(() => markersFromEvents(live.events, now), [live.events, now]);
+  const liveMarkers = useMemo(
+    () => (showPoseGraph ? [] : markersFromEvents(live.events, now)),
+    [showPoseGraph, live.events, now],
+  );
   const elapsedMs = session ? (running ? now - session.started_at * 1000 : session.elapsed_sec * 1000) : 0;
   const receivers = espReceivers(poseLinks);
   const sinceLast = session?.seconds_since_last_packet ?? null;
@@ -474,7 +482,7 @@ export default function NightMovementDashboardPage() {
                   chartMinWidth={0}
                   emptyText={live.loading ? "불러오는 중입니다" : "취침 모드를 켜면 관찰을 시작합니다"}
                   chart={
-                    session &&
+                    (session || showPoseGraph) &&
                     liveSeries && (
                       <MovementChart
                         series={liveSeries}
@@ -496,7 +504,7 @@ export default function NightMovementDashboardPage() {
                 chartMinWidth={0}
                 emptyText={live.loading ? "불러오는 중입니다" : "취침 모드를 켜면 관찰을 시작합니다"}
                 chart={
-                  session &&
+                  (session || showPoseGraph) &&
                   liveSeries && (
                     <HeatmapChart
                       series={liveSeries}

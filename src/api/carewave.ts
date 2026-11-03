@@ -95,3 +95,4 @@ export const poseSocketPath = "/ws/pose";
 export const listPoseModels = () => apiRequest<PoseModelItem[]>("/api/pose/models");
 export const setActivePoseModel = (name: string) =>
   apiRequest<PoseModel>("/api/pose/models/active", { method: "PUT", body: JSON.stringify({ name }) });
+export const getPoseSignals = (params: SignalQuery = {}) => apiRequest<Signals>(`/api/pose/signals${query({ ...params })}`);
