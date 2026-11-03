@@ -63,7 +63,7 @@ export function UploadModal({ uploading = false, onClose, onFileSelected }: Uplo
         <S.HiddenInput
           ref={inputRef}
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,text/csv,.bin"
           onChange={(e) => {
             const file = e.target.files?.[0];
             e.target.value = "";
@@ -72,7 +72,7 @@ export function UploadModal({ uploading = false, onClose, onFileSelected }: Uplo
         />
       </S.DropArea>
 
-      <S.Text $mt={15}>CSV · 최대 50MB</S.Text>
+      <S.Text $mt={15}>CSV 최대 50MB · ESP 6대 녹화(.bin) 최대 300MB</S.Text>
       <S.Text $mt={6}>필수 항목: 타임스탬프 · 수신기 · CSI 진폭</S.Text>
 
       <S.Footer $mt={53}>

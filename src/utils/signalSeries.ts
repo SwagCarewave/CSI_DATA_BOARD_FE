@@ -179,6 +179,9 @@ export function toCsvRecord(file: CsvFile): CsvRecord {
     name: file.filename,
     start: new Date(toMs(file.record_start)),
     end: new Date(toMs(file.record_end)),
-    analysisLabel: status === "succeeded" ? null : status ? analysisLabels[status] : "분석 전",
+    analysisLabel:
+      [file.kind === "mesh6" ? "6대 녹화" : null, status === "succeeded" ? null : status ? analysisLabels[status] : "분석 전"]
+        .filter(Boolean)
+        .join(" · ") || null,
   };
 }
