@@ -228,3 +228,79 @@ export interface MazeRecordList {
   records: RankedMazeRecord[];
   has_more: boolean;
 }
+
+export interface PosePoint {
+  name: string;
+  x: number;
+  y: number;
+}
+
+export interface PoseModel {
+  name: string;
+  type: string;
+  title: string;
+  points: string[];
+  skeleton: [string, string][];
+  classes: string[];
+  image_size: [number, number] | null;
+  labels: Record<string, Record<string, string>>;
+}
+
+export interface PoseFrame {
+  ts: UnixSeconds;
+  model: string;
+  points: PosePoint[];
+  smoothed: PosePoint[];
+  action: { code: string; label: string; score: number };
+  probabilities: Record<string, number>;
+  posture: { code: string; label: string; scores: Record<string, number> };
+  activity_score: number;
+  direction: "up" | "left" | "right";
+  direction_ko: string;
+  fall_alarm: boolean;
+}
+
+export interface PoseCalibration {
+  required: boolean;
+  active: boolean;
+  progress: number;
+  seconds: number;
+}
+
+export type PoseLinkStatus = "ok" | "weak" | "lost" | "none";
+
+export interface PoseLink {
+  link: string;
+  from: number;
+  to: number;
+  status: PoseLinkStatus;
+  status_ko: string;
+  rate_hz: number;
+  age_sec: number | null;
+}
+
+export interface PoseLinkState {
+  links: PoseLink[];
+  links_ok: number;
+  links_total: number;
+  ready: boolean;
+  valid_frame_ratio: number | null;
+  calibration: PoseCalibration;
+  seconds_since_last_record: number | null;
+}
+
+export type PoseMessage =
+  | ({ type: "snapshot"; model: PoseModel; latest: PoseFrame | null; recent: PoseFrame[] } & PoseLinkState)
+  | ({ type: "pose" } & PoseFrame)
+  | ({ type: "links" } & PoseLinkState)
+  | { type: "calibration"; calibration: PoseCalibration }
+  | { type: "model"; model: PoseModel };
+
+export interface PoseModelItem {
+  name: string;
+  title: string;
+  type: string;
+  points: number;
+  classes: string[];
+  active: boolean;
+}

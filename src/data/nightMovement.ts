@@ -2,7 +2,7 @@
 
 // 화면에서 쓰는 데이터 형태와 선택지
 
-import type { GuardianResult, ReplaySpeed, RxStatusCode } from "../api/types";
+import type { GuardianResult, PoseLink, ReplaySpeed, RxStatusCode } from "../api/types";
 
 export type EventStatus = "pending" | "normal" | "help" | "false";
 export type ConfirmResult = Exclude<EventStatus, "pending">;
@@ -69,3 +69,17 @@ export const defaultReceivers: Receiver[] = ["RX1", "RX2", "RX3"].map((device) =
   device,
   state: "notConnected",
 }));
+
+export const espReceivers = (links: PoseLink[]): Receiver[] =>
+  [1, 2, 3, 4, 5, 6].map((esp) => {
+    const own = links.filter((link) => link.from === esp || link.to === esp);
+    const state: ReceiverState =
+      own.length > 0 && own.every((link) => link.status === "ok")
+        ? "normal"
+        : own.some((link) => link.status === "ok" || link.status === "weak")
+          ? "weak"
+          : own.some((link) => link.status === "lost")
+            ? "disconnected"
+            : "notConnected";
+    return { device: `ESP${esp}`, state };
+  });

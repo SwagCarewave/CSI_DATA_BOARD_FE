@@ -36,6 +36,16 @@ export const Header = styled.header`
   display: flex;
   align-items: center;
 
+  ${media.laptop} {
+    height: auto;
+    min-height: 56px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
   ${media.tablet} {
     height: auto;
     margin: 0 -16px;

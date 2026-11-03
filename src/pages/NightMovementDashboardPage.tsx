@@ -15,6 +15,8 @@ import MovementChart from "../components/NightMovement/MovementChart";
 import HeatmapChart from "../components/NightMovement/HeatmapChart";
 import MazeDirection from "../components/NightMovement/MazeDirection";
 import ActivityRecordsCard from "../components/NightMovement/ActivityRecordsCard";
+import SkeletonLiveCard from "../components/NightMovement/SkeletonLiveCard";
+import FallAlertModal from "../components/FallAlertModal";
 import RangeSelect from "../components/NightMovement/RangeSelect";
 import CsvToolbar from "../components/NightMovement/CsvToolbar";
 import CsvEmptyToolbar from "../components/NightMovement/CsvEmptyToolbar";
@@ -38,11 +40,12 @@ import {
 import { confirmEvent } from "../api/carewave";
 import { errorMessage } from "../api/client";
 import type { CsvFile } from "../api/types";
-import { defaultReceivers, graphRangeOptions, resultToGuardian, rxStatusToState } from "../data/nightMovement";
+import { espReceivers, graphRangeOptions, resultToGuardian } from "../data/nightMovement";
 import type { GraphRange } from "../data/nightMovement";
 import { useCsvFiles } from "../hooks/useCsvFiles";
 import { useLiveSession } from "../hooks/useLiveSession";
 import { useNow } from "../hooks/useNow";
+import { usePoseFeed } from "../hooks/usePoseFeed";
 import { useRecording } from "../hooks/useRecording";
 import { useReplay } from "../hooks/useReplay";
 import { formatClock } from "../utils/chartScale";
@@ -113,6 +116,10 @@ export default function NightMovementDashboardPage() {
   const [uploading, setUploading] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const analysisCancel = useRef({ current: false });
+  const [skeletonView, setSkeletonView] = useState(false);
+  const fallAlarmAt = usePoseFeed((s) => s.fallAlarmAt);
+  const poseLinks = usePoseFeed((s) => s.links);
+  const [dismissedFallAt, setDismissedFallAt] = useState<number | null>(null);
   const now = useNow();
 
   const live = useLiveSession(rangeSeconds(realtimeRange));
@@ -173,9 +180,7 @@ export default function NightMovementDashboardPage() {
   };
   const liveMarkers = useMemo(() => markersFromEvents(live.events, now), [live.events, now]);
   const elapsedMs = session ? (running ? now - session.started_at * 1000 : session.elapsed_sec * 1000) : 0;
-  const receivers = session?.rx.length
-    ? session.rx.map((rx) => ({ device: rx.rx, state: rxStatusToState[rx.status] }))
-    : defaultReceivers;
+  const receivers = espReceivers(poseLinks);
   const sinceLast = session?.seconds_since_last_packet ?? null;
   const signalCaption = !running ? (session ? "관찰 종료" : "관찰 전") : sinceLast !== null && sinceLast < 5 ? "신호 수신 중" : "수신 대기 중";
 
@@ -309,7 +314,9 @@ export default function NightMovementDashboardPage() {
     }
   };
 
-  const recordsCard = (
+  const recordsCard = skeletonView ? (
+    <SkeletonLiveCard onSelectEsp4={() => setSkeletonView(false)} />
+  ) : (
     <ActivityRecordsCard
       events={currentEvents}
       compact={mode === "csv"}
@@ -353,7 +360,12 @@ export default function NightMovementDashboardPage() {
   return (
     <S.Page>
       <S.Board>
-        <DashboardHeader mode={mode} onModeChange={setMode} />
+        <DashboardHeader
+          mode={mode}
+          onModeChange={setMode}
+          skeletonView={skeletonView}
+          onSkeletonViewChange={setSkeletonView}
+        />
 
         {live.alert && (
           <S.Notice $tone="alert" role="alert">
@@ -459,7 +471,7 @@ export default function NightMovementDashboardPage() {
 
             <S.Row>
               <WifiHeatmapCard
-                subtitle="RX1 · RX2 · RX3 신호를 함께 표시합니다."
+                subtitle="ESP 장치 신호를 함께 표시합니다."
                 chartMinWidth={0}
                 emptyText={live.loading ? "불러오는 중입니다" : "취침 모드를 켜면 관찰을 시작합니다"}
                 chart={
@@ -578,6 +590,10 @@ export default function NightMovementDashboardPage() {
       </S.Board>
 
       {renderModal()}
+      <FallAlertModal
+        isOpen={fallAlarmAt !== null && fallAlarmAt !== dismissedFallAt}
+        onClose={() => setDismissedFallAt(fallAlarmAt)}
+      />
     </S.Page>
   );
 }
