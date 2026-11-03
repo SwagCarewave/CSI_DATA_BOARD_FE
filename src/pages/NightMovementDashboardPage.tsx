@@ -63,6 +63,7 @@ import { formatDuration } from "../utils/nightMovementFormat";
 const GRAPH_HEIGHT = 250;
 const HEATMAP_HEIGHT = 138;
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+const MAX_RECORDING_BYTES = 300 * 1024 * 1024;
 
 type ModalState =
   | { type: "none" }
@@ -193,12 +194,14 @@ export default function NightMovementDashboardPage() {
 
   /* 업로드 · 분석 */
   const handleFileSelected = async (file: File) => {
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      setModal({ type: "fileError", message: "CSV 파일(.csv)만 올릴 수 있습니다." });
+    const name = file.name.toLowerCase();
+    const isRecording = name.endsWith(".bin");
+    if (!name.endsWith(".csv") && !isRecording) {
+      setModal({ type: "fileError", message: "CSV 파일(.csv) 또는 ESP 6대 녹화 파일(.bin)만 올릴 수 있습니다." });
       return;
     }
-    if (file.size > MAX_UPLOAD_BYTES) {
-      setModal({ type: "fileError", message: "파일이 50MB를 넘습니다." });
+    if (file.size > (isRecording ? MAX_RECORDING_BYTES : MAX_UPLOAD_BYTES)) {
+      setModal({ type: "fileError", message: isRecording ? "파일이 300MB를 넘습니다." : "파일이 50MB를 넘습니다." });
       return;
     }
     setUploading(true);

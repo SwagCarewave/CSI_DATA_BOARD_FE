@@ -151,6 +151,7 @@ export interface CsvFile {
   duration_sec: number;
   uploaded_at: UnixSeconds;
   latest_analysis: AnalysisSummary | null;
+  kind?: "csi4" | "mesh6";
 }
 
 export interface Analysis {
@@ -170,6 +171,8 @@ export interface Analysis {
   finished_at: UnixSeconds | null;
   created_at: UnixSeconds;
   created?: boolean;
+  kind?: "signals" | "pose";
+  pose_model?: PoseDrawModel | null;
 }
 
 export type ReplaySpeed = 1 | 4 | 16;
@@ -304,3 +307,5 @@ export interface PoseModelItem {
   classes: string[];
   active: boolean;
 }
+
+export type PoseDrawModel = Pick<PoseModel, "points" | "skeleton" | "image_size"> & Partial<PoseModel>;
