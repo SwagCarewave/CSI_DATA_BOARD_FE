@@ -4,7 +4,7 @@ import * as S from "../../styles/NightMovement/SkeletonLive";
 import { Button, CardTitle, cw } from "../../styles/NightMovement/tokens";
 import { recalibratePose } from "../../api/carewave";
 import { errorMessage } from "../../api/client";
-import type { PoseFrame, PoseModel } from "../../api/types";
+import type { PoseDrawModel, PoseReplayFrame } from "../../api/types";
 import { usePoseFeed } from "../../hooks/usePoseFeed";
 import type { PoseState } from "../../hooks/usePoseFeed";
 import PoseModelSelect from "./PoseModelSelect";
@@ -32,8 +32,8 @@ function drawSkeleton(
   canvas: HTMLCanvasElement,
   width: number,
   height: number,
-  model: PoseModel | null,
-  pose: PoseFrame | null,
+  model: PoseDrawModel | null,
+  pose: PoseReplayFrame | null,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -91,7 +91,9 @@ function drawSkeleton(
   ctx.globalAlpha = 1;
 }
 
-function overlayFor(s: PoseState) {
+type OverlayInfo = { title: string; caption: string; progress?: number } | null;
+
+function overlayFor(s: PoseState): OverlayInfo {
   if (s.unavailable) return { title: "서버에서 자세 모델이 꺼져 있습니다.", caption: "백엔드 설정을 확인해 주세요." };
   if (!s.connected) return { title: "서버에 연결하는 중입니다.", caption: "잠시만 기다려 주세요." };
   if (s.linksOk === 0) {
@@ -113,20 +115,36 @@ function overlayFor(s: PoseState) {
   return null;
 }
 
-export default function SkeletonLiveCard({ onSelectEsp4 }: { onSelectEsp4: () => void }) {
+function replayOverlay(model: PoseDrawModel | null, current: PoseReplayFrame | null, notice?: OverlayInfo): OverlayInfo {
+  if (notice) return notice;
+  if (!model) return { title: "재생을 준비하는 중입니다.", caption: "잠시만 기다려 주세요." };
+  if (current) return null;
+  return model.image_size
+    ? { title: "보정 구간입니다.", caption: "13관절 모델은 녹화 앞 10초 동안 스켈레톤이 없습니다." }
+    : { title: "이 시각의 스켈레톤이 없습니다.", caption: "재생바를 옮겨 보세요." };
+}
+
+interface SkeletonLiveCardProps {
+  onSelectEsp4: () => void;
+  replay?: { model: PoseDrawModel | null; current: PoseReplayFrame | null; notice?: OverlayInfo };
+}
+
+export default function SkeletonLiveCard({ onSelectEsp4, replay }: SkeletonLiveCardProps) {
   const feed = usePoseFeed((s) => s);
   const [screenRef, size] = useElementSize<HTMLDivElement>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [recalibrating, setRecalibrating] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (canvasRef.current) drawSkeleton(canvasRef.current, size.width, size.height, feed.model, feed.pose);
-  }, [size.width, size.height, feed.model, feed.pose]);
+  const model = replay ? replay.model : feed.model;
+  const pose = replay ? replay.current : feed.pose;
 
-  const overlay = overlayFor(feed);
+  useEffect(() => {
+    if (canvasRef.current) drawSkeleton(canvasRef.current, size.width, size.height, model, pose);
+  }, [size.width, size.height, model, pose]);
+
+  const overlay = replay ? replayOverlay(replay.model, replay.current, replay.notice) : overlayFor(feed);
   const linkTone = feed.ready ? "ok" : feed.linksOk > 0 ? "warn" : "off";
-  const pose = feed.pose;
 
   const recalibrate = () => {
     setRecalibrating(true);
@@ -137,15 +155,17 @@ export default function SkeletonLiveCard({ onSelectEsp4 }: { onSelectEsp4: () =>
   };
 
   return (
-    <S.SkeletonCard aria-label="스켈레톤 실시간">
+    <S.SkeletonCard aria-label={replay ? "스켈레톤 재생" : "스켈레톤 실시간"}>
       <S.Header>
-        <CardTitle>스켈레톤 실시간</CardTitle>
-        <S.HeaderActions>
-          <PoseModelSelect activeName={feed.model?.name ?? null} onSelectEsp4={onSelectEsp4} onError={setActionError} />
-          <S.LinkBadge $tone={linkTone}>
-            연결 {feed.linksOk}/{feed.linksTotal}
-          </S.LinkBadge>
-        </S.HeaderActions>
+        <CardTitle>{replay ? "스켈레톤 재생" : "스켈레톤 실시간"}</CardTitle>
+        {!replay && (
+          <S.HeaderActions>
+            <PoseModelSelect activeName={feed.model?.name ?? null} onSelectEsp4={onSelectEsp4} onError={setActionError} />
+            <S.LinkBadge $tone={linkTone}>
+              연결 {feed.linksOk}/{feed.linksTotal}
+            </S.LinkBadge>
+          </S.HeaderActions>
+        )}
       </S.Header>
 
       <S.Screen ref={screenRef}>
@@ -175,7 +195,7 @@ export default function SkeletonLiveCard({ onSelectEsp4 }: { onSelectEsp4: () =>
             )}
           </S.Status>
         )}
-        {feed.calibration?.required && (
+        {!replay && feed.calibration?.required && (
           <Button
             type="button"
             $variant="secondary"
