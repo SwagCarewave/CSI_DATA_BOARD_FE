@@ -2,8 +2,8 @@
 
 import styled, { createGlobalStyle, css } from "styled-components";
 
-import galmuri from "../../assets/졸작게임이미지/졸작게임이미지/폰트/Galmuri11.ttf";
-import galmuriBold from "../../assets/졸작게임이미지/졸작게임이미지/폰트/Galmuri11-Bold.ttf";
+import galmuri from "../../assets/졸작게임이미지/졸작게임이미지/폰트/Galmuri11.woff2";
+import galmuriBold from "../../assets/졸작게임이미지/졸작게임이미지/폰트/Galmuri11-Bold.woff2";
 
 export const gameColors = {
   ink: "#000000",
@@ -21,14 +21,14 @@ export const gameColors = {
 export const GameFonts = createGlobalStyle`
   @font-face {
     font-family: "Galmuri11";
-    src: url(${galmuri}) format("truetype");
+    src: url(${galmuri}) format("woff2");
     font-weight: 400;
     font-display: block;
   }
 
   @font-face {
     font-family: "Galmuri11";
-    src: url(${galmuriBold}) format("truetype");
+    src: url(${galmuriBold}) format("woff2");
     font-weight: 700;
     font-display: block;
   }
