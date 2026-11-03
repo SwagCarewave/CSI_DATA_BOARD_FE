@@ -13,7 +13,6 @@ import MovementGraphCard from "../components/NightMovement/MovementGraphCard";
 import WifiHeatmapCard from "../components/NightMovement/WifiHeatmapCard";
 import MovementChart from "../components/NightMovement/MovementChart";
 import HeatmapChart from "../components/NightMovement/HeatmapChart";
-import MazeDirection from "../components/NightMovement/MazeDirection";
 import ActivityRecordsCard from "../components/NightMovement/ActivityRecordsCard";
 import SkeletonLiveCard from "../components/NightMovement/SkeletonLiveCard";
 import FallAlertModal from "../components/FallAlertModal";
@@ -160,7 +159,7 @@ export default function NightMovementDashboardPage() {
   /* 실시간 */
   const session = live.session;
   const running = session?.status === "running";
-  // 6대 그래프도 4대처럼 취침 모드 구간(켠 시각 ~ 끈 시각)만 보여 준다. 스켈레톤은 취침 모드와 상관없이 항상 표시
+  // 6대 그래프도 4대처럼 관찰 모드 구간(켠 시각 ~ 끈 시각)만 보여 준다. 스켈레톤은 관찰 모드와 상관없이 항상 표시
   const poseSessionSeries = useMemo(
     () =>
       poseSeries && session
@@ -468,8 +467,6 @@ export default function NightMovementDashboardPage() {
               }}
             />
 
-            <MazeDirection running={running} steps={live.mazeSteps} status={live.mazeStatus} />
-
             <S.Row>
               <S.LeftColumn>
                 <ObservationSummary
@@ -489,7 +486,7 @@ export default function NightMovementDashboardPage() {
                   subtitle="시간에 따른 움직임의 강도를 분석한 결과입니다."
                   action={<RangeSelect value={realtimeRange} onChange={setRealtimeRange} />}
                   chartMinWidth={0}
-                  emptyText={live.loading ? "불러오는 중입니다" : "취침 모드를 켜면 관찰을 시작합니다"}
+                  emptyText={live.loading ? "불러오는 중입니다" : "관찰 모드를 켜면 관찰을 시작합니다"}
                   chart={
                     (session || showPoseGraph) &&
                     liveSeries && (
@@ -511,7 +508,7 @@ export default function NightMovementDashboardPage() {
               <WifiHeatmapCard
                 subtitle="ESP 장치 신호를 함께 표시합니다."
                 chartMinWidth={0}
-                emptyText={live.loading ? "불러오는 중입니다" : "취침 모드를 켜면 관찰을 시작합니다"}
+                emptyText={live.loading ? "불러오는 중입니다" : "관찰 모드를 켜면 관찰을 시작합니다"}
                 chart={
                   (session || showPoseGraph) &&
                   liveSeries && (

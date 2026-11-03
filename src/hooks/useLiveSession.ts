@@ -1,6 +1,6 @@
 // src/hooks/useLiveSession.ts
 
-// 실시간 관찰: 진행 중 세션 확인 → 그래프·사건 불러오기 → WebSocket으로 이어 받기 → 취침 모드 켜기/끄기
+// 실시간 관찰: 진행 중 세션 확인 → 그래프·사건 불러오기 → WebSocket으로 이어 받기 → 관찰 모드 켜기/끄기
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -15,7 +15,7 @@ import {
 } from "../api/carewave";
 import { errorMessage } from "../api/client";
 import { openSocket } from "../api/socket";
-import type { ApiEvent, Frame, Session, SessionMessage } from "../api/types";
+import type { ApiEvent, Session, SessionMessage } from "../api/types";
 import { appendFrames, seriesFromSignals } from "../utils/signalSeries";
 import type { SignalSeries } from "../utils/signalSeries";
 
@@ -23,36 +23,6 @@ export interface LiveAlert {
   eventId: string;
   message: string;
 }
-
-// 미로 방향 (테스트): 서버는 2초에 한 번만 direction_ko(좌/우/상)를 보내고 나머지 프레임은 null.
-// 값이 들어온 프레임만 한 걸음으로 쌓는다 (null 프레임은 무시 → 이전 글자 유지)
-export interface MazeStep {
-  id: number;
-  ts: number;
-  text: string;
-}
-
-// 가장 최근 프레임의 상태: 준비 중·신호 이상 표시용
-export interface MazeStatus {
-  state: string;
-  signalOk: boolean;
-}
-
-const MAZE_KEEP = 16; // 화면 15칸 + 왼쪽으로 빠져나가는 1칸
-
-const appendSteps = (prev: MazeStep[], frames: Frame[]) => {
-  const lastTs = prev.at(-1)?.ts ?? -Infinity;
-  const fresh = frames.filter((frame) => frame.direction_ko && frame.ts > lastTs).sort((a, b) => a.ts - b.ts);
-  if (fresh.length === 0) return prev;
-  let id = prev.at(-1)?.id ?? 0;
-  const steps = fresh.map((frame) => ({ id: ++id, ts: frame.ts, text: frame.direction_ko! }));
-  return [...prev, ...steps].slice(-MAZE_KEEP);
-};
-
-const latestStatus = (frames: Frame[]): MazeStatus | null => {
-  const last = frames.reduce<Frame | null>((latest, frame) => (!latest || frame.ts >= latest.ts ? frame : latest), null);
-  return last && { state: last.state, signalOk: last.signal_ok };
-};
 
 export function useLiveSession(windowSec: number) {
   const [session, setSession] = useState<Session | null>(null);
@@ -62,8 +32,6 @@ export function useLiveSession(windowSec: number) {
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [toggling, setToggling] = useState(false);
   const [alert, setAlert] = useState<LiveAlert | null>(null);
-  const [mazeSteps, setMazeSteps] = useState<MazeStep[]>([]);
-  const [mazeStatus, setMazeStatus] = useState<MazeStatus | null>(null);
 
   const sessionId = session?.id;
   const running = session?.status === "running";
@@ -131,13 +99,9 @@ export function useLiveSession(windowSec: number) {
           case "snapshot":
             setSession(message.session);
             setSeries((prev) => appendFrames(prev, message.frames, keepMs));
-            setMazeSteps((prev) => appendSteps(prev, message.frames));
-            setMazeStatus((prev) => latestStatus(message.frames) ?? prev);
             break;
           case "frames":
             setSeries((prev) => appendFrames(prev, message.frames, keepMs));
-            setMazeSteps((prev) => appendSteps(prev, message.frames));
-            setMazeStatus((prev) => latestStatus(message.frames) ?? prev);
             break;
           case "status":
             setSession((prev) =>
@@ -171,7 +135,7 @@ export function useLiveSession(windowSec: number) {
     });
   }, [sessionId, running, windowSec, refreshEvents]);
 
-  // 상단 "취침 모드" 토글
+  // 상단 "관찰 모드" 토글
   const setSleepMode = async (on: boolean) => {
     setToggling(true);
     setError(null);
@@ -182,8 +146,6 @@ export function useLiveSession(windowSec: number) {
           setSeries(null);
           setEvents([]);
           setAlert(null);
-          setMazeSteps([]);
-          setMazeStatus(null);
         }
         setSession(started);
       } else if (session?.status === "running") {
@@ -210,8 +172,6 @@ export function useLiveSession(windowSec: number) {
     events,
     toggling,
     alert,
-    mazeSteps,
-    mazeStatus,
     dismissAlert: () => setAlert(null),
     setSleepMode,
     replaceEvent,

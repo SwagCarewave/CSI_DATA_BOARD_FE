@@ -1,9 +1,9 @@
 // src/hooks/useRecording.ts
 
 // 실시간 녹화 CSV (API 24·25)
-// - 취침 모드 중: 녹화 중이라 받을 수 없음 (버튼 비활성)
-// - 취침 모드 종료: ready → CSV 받기 가능 (여러 번 받을 수 있음)
-// - 보관 시간(기본 5분)이 지나거나, 새 취침 모드를 시작하거나, 15분을 넘겨 녹화가 버려지면 다시 비활성
+// - 관찰 모드 중: 녹화 중이라 받을 수 없음 (버튼 비활성)
+// - 관찰 모드 종료: ready → CSV 받기 가능 (여러 번 받을 수 있음)
+// - 보관 시간(기본 5분)이 지나거나, 새 관찰 모드를 시작하거나, 15분을 넘겨 녹화가 버려지면 다시 비활성
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -13,7 +13,7 @@ import type { Recording, Session } from "../api/types";
 const FINALIZE_RETRY_MS = 2000;
 
 const unavailableHint: Record<string, string> = {
-  recording: "취침 모드를 끄면 CSV를 받을 수 있습니다.",
+  recording: "관찰 모드를 끄면 CSV를 받을 수 있습니다.",
   too_long: "관찰이 15분을 넘어 녹화가 삭제되었습니다.",
   empty: "받은 CSI 데이터가 없어 CSV가 없습니다.",
   expired: "보관 시간이 지나 녹화가 삭제되었습니다.",
@@ -80,7 +80,7 @@ export function useRecording(session: Session | null, nowMs: number) {
   const canDownload = sessionStatus === "stopped" && !!current?.downloadable && !expired;
 
   let hint: string;
-  if (!session) hint = "취침 모드 관찰을 마치면 CSV를 받을 수 있습니다.";
+  if (!session) hint = "관찰 모드 관찰을 마치면 CSV를 받을 수 있습니다.";
   else if (sessionStatus === "running") hint = unavailableHint.recording;
   else if (canDownload && current?.expires_at) {
     const minutesLeft = Math.max(1, Math.ceil((current.expires_at * 1000 - nowMs) / 60000));

@@ -2,7 +2,7 @@
 
 import styled, { css } from "styled-components";
 
-// CareWave 야간 움직임 대시보드 디자인 토큰 (Figma 변수 --cw-*)
+// CareWave 낙상 감지 대시보드 디자인 토큰 (Figma 변수 --cw-*)
 export const cw = {
   bg: "#EDF8FF",
   white: "#FFFFFF",

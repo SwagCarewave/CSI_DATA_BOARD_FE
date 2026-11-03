@@ -84,7 +84,7 @@ export function appendFrames(series: SignalSeries | null, frames: Frame[], keepM
   };
 }
 
-// 시작·끝 시각(ms) 사이의 점만 남긴다 (6대 그래프를 취침 모드 구간으로 자를 때)
+// 시작·끝 시각(ms) 사이의 점만 남긴다 (6대 그래프를 관찰 모드 구간으로 자를 때)
 export function sliceSeries(series: SignalSeries, startMs: number, endMs = Infinity): SignalSeries {
   const keep = series.ts.map((t) => t >= startMs && t <= endMs);
   const pick = <T,>(values: T[]) => values.filter((_, i) => keep[i]);

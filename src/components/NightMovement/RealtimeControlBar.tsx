@@ -39,7 +39,7 @@ export default function RealtimeControlBar({
   return (
     <S.Bar aria-label="실시간 제어">
       <S.Segment $width={111} $gap={6}>
-        <S.Label id="sleep-mode-label">취침 모드</S.Label>
+        <S.Label id="sleep-mode-label">관찰 모드</S.Label>
         <S.Switch
           type="button"
           role="switch"

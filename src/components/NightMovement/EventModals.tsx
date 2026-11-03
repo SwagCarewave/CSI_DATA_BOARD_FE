@@ -31,7 +31,7 @@ export function EventDetailModal({ event, onClose, onSelectResult }: EventDetail
           {eventMeta(event)}
           <S.Strong $color={cw.red}>보호자 확인 대기</S.Strong>
         </S.Text>
-        <S.Text $mt={21}>취침 모드 중 움직임이 이어졌습니다.</S.Text>
+        <S.Text $mt={21}>관찰 모드 중 움직임이 이어졌습니다.</S.Text>
         <S.Text $mt={7}>현장을 확인해 주세요.</S.Text>
         <S.Footer $mt={31}>
           <Button type="button" $width={150} onClick={onSelectResult}>

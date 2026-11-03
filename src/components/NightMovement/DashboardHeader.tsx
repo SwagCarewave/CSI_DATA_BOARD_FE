@@ -18,7 +18,7 @@ export default function DashboardHeader({ mode, onModeChange, skeletonView, onSk
   return (
     <S.Header>
       <S.Brand>CareWave</S.Brand>
-      <S.BoardTitle>야간 움직임 대시보드</S.BoardTitle>
+      <S.BoardTitle>낙상 감지 대시보드</S.BoardTitle>
 
       <S.ModeTabs aria-label="화면 선택">
         <Button
