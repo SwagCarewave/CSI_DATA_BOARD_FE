@@ -10,15 +10,25 @@ export type DashboardMode = "realtime" | "csv";
 interface DashboardHeaderProps {
   mode: DashboardMode;
   onModeChange: (mode: DashboardMode) => void;
+  skeletonView: boolean;
+  onSkeletonViewChange: (next: boolean) => void;
 }
 
-export default function DashboardHeader({ mode, onModeChange }: DashboardHeaderProps) {
+export default function DashboardHeader({ mode, onModeChange, skeletonView, onSkeletonViewChange }: DashboardHeaderProps) {
   return (
     <S.Header>
       <S.Brand>CareWave</S.Brand>
       <S.BoardTitle>야간 움직임 대시보드</S.BoardTitle>
 
       <S.ModeTabs aria-label="화면 선택">
+        <Button
+          type="button"
+          $variant={skeletonView ? "primary" : "secondary"}
+          aria-pressed={skeletonView}
+          onClick={() => onSkeletonViewChange(!skeletonView)}
+        >
+          스켈레톤 버전
+        </Button>
         <S.GameLink as={Link} to="/game" $variant="secondary">
           esp 게임 바로가기
         </S.GameLink>

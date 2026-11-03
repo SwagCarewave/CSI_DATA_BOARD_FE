@@ -15,6 +15,8 @@ import MovementChart from "../components/NightMovement/MovementChart";
 import HeatmapChart from "../components/NightMovement/HeatmapChart";
 import MazeDirection from "../components/NightMovement/MazeDirection";
 import ActivityRecordsCard from "../components/NightMovement/ActivityRecordsCard";
+import SkeletonLiveCard from "../components/NightMovement/SkeletonLiveCard";
+import FallAlertModal from "../components/FallAlertModal";
 import RangeSelect from "../components/NightMovement/RangeSelect";
 import CsvToolbar from "../components/NightMovement/CsvToolbar";
 import CsvEmptyToolbar from "../components/NightMovement/CsvEmptyToolbar";
@@ -43,6 +45,7 @@ import type { GraphRange } from "../data/nightMovement";
 import { useCsvFiles } from "../hooks/useCsvFiles";
 import { useLiveSession } from "../hooks/useLiveSession";
 import { useNow } from "../hooks/useNow";
+import { usePoseFeed } from "../hooks/usePoseFeed";
 import { useRecording } from "../hooks/useRecording";
 import { useReplay } from "../hooks/useReplay";
 import { formatClock } from "../utils/chartScale";
@@ -113,6 +116,9 @@ export default function NightMovementDashboardPage() {
   const [uploading, setUploading] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const analysisCancel = useRef({ current: false });
+  const [skeletonView, setSkeletonView] = useState(false);
+  const fallAlarmAt = usePoseFeed((s) => s.fallAlarmAt);
+  const [dismissedFallAt, setDismissedFallAt] = useState<number | null>(null);
   const now = useNow();
 
   const live = useLiveSession(rangeSeconds(realtimeRange));
@@ -309,7 +315,9 @@ export default function NightMovementDashboardPage() {
     }
   };
 
-  const recordsCard = (
+  const recordsCard = skeletonView ? (
+    <SkeletonLiveCard onSelectEsp4={() => setSkeletonView(false)} />
+  ) : (
     <ActivityRecordsCard
       events={currentEvents}
       compact={mode === "csv"}
@@ -353,7 +361,12 @@ export default function NightMovementDashboardPage() {
   return (
     <S.Page>
       <S.Board>
-        <DashboardHeader mode={mode} onModeChange={setMode} />
+        <DashboardHeader
+          mode={mode}
+          onModeChange={setMode}
+          skeletonView={skeletonView}
+          onSkeletonViewChange={setSkeletonView}
+        />
 
         {live.alert && (
           <S.Notice $tone="alert" role="alert">
@@ -578,6 +591,10 @@ export default function NightMovementDashboardPage() {
       </S.Board>
 
       {renderModal()}
+      <FallAlertModal
+        isOpen={fallAlarmAt !== null && fallAlarmAt !== dismissedFallAt}
+        onClose={() => setDismissedFallAt(fallAlarmAt)}
+      />
     </S.Page>
   );
 }
