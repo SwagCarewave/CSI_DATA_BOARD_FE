@@ -5,8 +5,8 @@ import styled from "styled-components";
 import { Card, cw, media } from "./tokens";
 
 export const Bar = styled(Card)`
-  height: 94px;
-  padding-left: 41px;
+  min-height: 94px;
+  padding: 12px 0 12px 41px;
 
   display: flex;
   align-items: center;

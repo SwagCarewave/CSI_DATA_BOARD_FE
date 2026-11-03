@@ -40,7 +40,7 @@ import {
 import { confirmEvent } from "../api/carewave";
 import { errorMessage } from "../api/client";
 import type { CsvFile } from "../api/types";
-import { defaultReceivers, graphRangeOptions, resultToGuardian, rxStatusToState } from "../data/nightMovement";
+import { espReceivers, graphRangeOptions, resultToGuardian } from "../data/nightMovement";
 import type { GraphRange } from "../data/nightMovement";
 import { useCsvFiles } from "../hooks/useCsvFiles";
 import { useLiveSession } from "../hooks/useLiveSession";
@@ -118,6 +118,7 @@ export default function NightMovementDashboardPage() {
   const analysisCancel = useRef({ current: false });
   const [skeletonView, setSkeletonView] = useState(false);
   const fallAlarmAt = usePoseFeed((s) => s.fallAlarmAt);
+  const poseLinks = usePoseFeed((s) => s.links);
   const [dismissedFallAt, setDismissedFallAt] = useState<number | null>(null);
   const now = useNow();
 
@@ -179,9 +180,7 @@ export default function NightMovementDashboardPage() {
   };
   const liveMarkers = useMemo(() => markersFromEvents(live.events, now), [live.events, now]);
   const elapsedMs = session ? (running ? now - session.started_at * 1000 : session.elapsed_sec * 1000) : 0;
-  const receivers = session?.rx.length
-    ? session.rx.map((rx) => ({ device: rx.rx, state: rxStatusToState[rx.status] }))
-    : defaultReceivers;
+  const receivers = espReceivers(poseLinks);
   const sinceLast = session?.seconds_since_last_packet ?? null;
   const signalCaption = !running ? (session ? "관찰 종료" : "관찰 전") : sinceLast !== null && sinceLast < 5 ? "신호 수신 중" : "수신 대기 중";
 
@@ -472,7 +471,7 @@ export default function NightMovementDashboardPage() {
 
             <S.Row>
               <WifiHeatmapCard
-                subtitle="RX1 · RX2 · RX3 신호를 함께 표시합니다."
+                subtitle="ESP 장치 신호를 함께 표시합니다."
                 chartMinWidth={0}
                 emptyText={live.loading ? "불러오는 중입니다" : "취침 모드를 켜면 관찰을 시작합니다"}
                 chart={
