@@ -7,6 +7,7 @@ import styled from "styled-components";
 import type { EspLevel } from "../../hooks/useEspFeed";
 import { ImageButton, Picture, at } from "../../styles/ChristmasGame/common";
 import { images, ornamentImages } from "./assets";
+import { unlockSound } from "./sounds";
 
 const LEVELS: EspLevel[] = ["green", "orange", "red"];
 const LEVEL_TEXT: Record<EspLevel, string> = {
@@ -58,7 +59,10 @@ export default function LobbyScreen({ espLevel, sourceNote, onBackToDashboard, o
         type="button"
         style={ready ? at(384, 691, 482, 132) : at(384, 695, 482, 124)}
         disabled={!ready}
-        onClick={onStart}
+        onClick={() => {
+          unlockSound(); // 브라우저가 소리를 허용하도록 누르는 순간 깨워 둔다
+          onStart();
+        }}
         aria-label={ready ? "게임 시작" : "게임 시작 (ESP 연결이 모두 초록색이 되면 시작할 수 있어요)"}
       >
         <img src={ready ? images.startButton : images.startButtonDisabled} alt="" />

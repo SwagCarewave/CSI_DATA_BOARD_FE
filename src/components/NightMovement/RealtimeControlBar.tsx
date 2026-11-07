@@ -17,7 +17,7 @@ interface RealtimeControlBarProps {
   receivers: Receiver[];
   lastSignal: string;
   signalCaption: string;
-  // 실시간 녹화 추출 (관찰 종료 후에만 활성). 4대는 CSV, 6대는 BIN
+  // 실시간 녹화 추출 (관찰 종료 후에만 활성). 4대는 "CSV 추출", 6대는 "CSI 추출"(.bin 파일)
   csvExport: {
     label: string;
     enabled: boolean;

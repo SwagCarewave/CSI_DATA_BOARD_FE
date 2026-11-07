@@ -11,6 +11,7 @@ import { images, santaIdle, santaRun } from "./assets";
 import CandyCane from "./CandyCane";
 import ModelPicker from "./ModelPicker";
 import { PATH, formatGameTime } from "./mazeGame";
+import { playArrive, playArrow, playStart } from "./sounds";
 import { useMazeGame } from "./useMazeGame";
 
 export const GAME_WIDTH = 1215;
@@ -44,6 +45,15 @@ export default function GameScreen({ score, onFinish }: GameScreenProps) {
     const timer = window.setTimeout(finish, RESULT_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [game.phase]);
+
+  // 효과음: "시작" 표시 때 목소리, 화살표가 들어올 때마다 "뿅", 집에 도착하면 축하 멜로디
+  useEffect(() => {
+    if (game.phase === "go") playStart();
+    if (game.phase === "arrived") playArrive();
+  }, [game.phase]);
+  useEffect(() => {
+    if (game.nextId > 1) playArrow();
+  }, [game.nextId]);
 
   const cell = PATH[game.cell];
   // 발 기준점(칸 가운데 아래)만 칸에서 칸으로 미끄러진다.

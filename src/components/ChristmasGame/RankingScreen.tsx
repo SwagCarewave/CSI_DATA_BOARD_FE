@@ -9,6 +9,7 @@ import type { RankedMazeRecord } from "../../api/types";
 import { ImageButton, Picture, Text, at, gameColors } from "../../styles/ChristmasGame/common";
 import { images, rankBoardImage } from "./assets";
 import { TREE_LIMIT, recordTime, useMazeRecords } from "./rankings";
+import { playTada } from "./sounds";
 
 // 배경 트리 오너먼트(1~10등) 가운데 좌표 (1215 × 820 기준)
 const ORNAMENTS: [number, number][] = [
@@ -33,6 +34,9 @@ interface RankingScreenProps {
 export default function RankingScreen({ highlightId, onBack }: RankingScreenProps) {
   const [popupOpen, setPopupOpen] = useState(false);
   const top = useMazeRecords(TREE_LIMIT);
+
+  // 순위 공개 "짜잔~"
+  useEffect(() => playTada(), []);
 
   return (
     <>
