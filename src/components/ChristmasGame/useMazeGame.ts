@@ -1,6 +1,6 @@
 // src/components/ChristmasGame/useMazeGame.ts
 
-// 미로 게임 진행: 준비 → 시작 → 플레이(화살표 생성 · 2초마다 갈고리 · 한 칸 이동) → 도착
+// 미로 게임 진행: 준비 → 시작 → 플레이(화살표 생성 · 1초마다 갈고리 · 한 칸 이동) → 도착
 
 import { useEffect, useEffectEvent, useReducer } from "react";
 
@@ -19,7 +19,7 @@ import type { Direction } from "./mazeGame";
 
 const READY_MS = 1500; // "준비" 표시
 const GO_MS = 1000; // "시작" 표시
-const MOVE_MS = 900; // 한 칸 가는 시간 (그동안 달리기 GIF 반복)
+const MOVE_MS = 800; // 한 칸 가는 시간 (그동안 달리기 GIF 반복). 갈고리 간격(1초)보다 짧아야 다음 칸을 놓치지 않는다
 const SCORE_CHECK_MS = 250;
 const SCORE_STALE_MS = 2500; // 이보다 오래된 출력값으로는 화살표를 만들지 않는다
 const FADE_MS = 500;
@@ -131,7 +131,7 @@ export function useMazeGame(score: EspScore | null) {
     };
   }, []);
 
-  // 출력값 → 화살표: 방향이 바뀌면 곧바로, 같은 방향이면 2초마다 하나 더
+  // 출력값 → 화살표: 방향이 바뀌면 곧바로, 같은 방향이면 1초마다 하나 더
   const checkScore = useEffectEvent(() => {
     const now = Date.now();
     if (!score || now - score.ts > SCORE_STALE_MS) return;

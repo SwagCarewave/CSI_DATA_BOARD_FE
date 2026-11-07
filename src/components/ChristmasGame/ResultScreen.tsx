@@ -2,7 +2,7 @@
 
 // 결과 화면: 기록 시간 + 이름 입력 → 이름이 있으면 저장 버튼이 켜지고, 누르면 바로 서버에 저장(API 26)
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import styled from "styled-components";
 
@@ -12,6 +12,7 @@ import { ImageButton, Picture, Text, at, gameColors } from "../../styles/Christm
 import { images } from "./assets";
 import { formatGameTime } from "./mazeGame";
 import { saveRecord } from "./rankings";
+import { playTada } from "./sounds";
 
 const NAME_MAX = 10; // 서버는 20자까지 받지만, 입력 칸 너비에 맞춰 10자로 제한
 
@@ -25,6 +26,9 @@ export default function ResultScreen({ timeMs, onSaved }: ResultScreenProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const trimmed = name.trim();
+
+  // 기록 공개 "짜잔~"
+  useEffect(() => playTada(), []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

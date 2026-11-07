@@ -15,7 +15,7 @@ import MovementChart from "../components/NightMovement/MovementChart";
 import HeatmapChart from "../components/NightMovement/HeatmapChart";
 import ActivityRecordsCard from "../components/NightMovement/ActivityRecordsCard";
 import SkeletonLiveCard from "../components/NightMovement/SkeletonLiveCard";
-import FallAlertModal from "../components/FallAlertModal";
+import FallAlertOverlay from "../components/NightMovement/FallAlertOverlay";
 import RangeSelect from "../components/NightMovement/RangeSelect";
 import CsvToolbar from "../components/NightMovement/CsvToolbar";
 import CsvEmptyToolbar from "../components/NightMovement/CsvEmptyToolbar";
@@ -138,6 +138,9 @@ export default function NightMovementDashboardPage() {
   );
   const replay = useReplay(csv.result?.analysisId ?? csv.poseAnalysisId, recordView);
   const poseRecording = mode === "csv" && selectedFile?.kind === "mesh6";
+  // 낙상 경고: 실시간 ESP 6대 피드 + 기록 조회에서 녹화(.bin) 재생 중 넘어짐 알림 (둘 중 가장 최근 것)
+  const replayFallAt = poseRecording ? replay.fallAlarmAt : null;
+  const shownFallAt = Math.max(fallAlarmAt ?? -1, replayFallAt ?? -1);
 
   const apiEvents = mode === "realtime" ? live.events : (csv.result?.events ?? null);
   // 실시간 사건은 보호자 확인 전까지 열려 있으므로, "진행 중" 여부는 최근 판정 상태로 정한다
@@ -628,10 +631,9 @@ export default function NightMovementDashboardPage() {
       </S.Board>
 
       {renderModal()}
-      <FallAlertModal
-        isOpen={fallAlarmAt !== null && fallAlarmAt !== dismissedFallAt}
-        onClose={() => setDismissedFallAt(fallAlarmAt)}
-      />
+      {shownFallAt > 0 && shownFallAt !== dismissedFallAt && (
+        <FallAlertOverlay key={shownFallAt} onClose={() => setDismissedFallAt(shownFallAt)} />
+      )}
     </S.Page>
   );
 }

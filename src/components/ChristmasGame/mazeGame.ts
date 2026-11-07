@@ -2,9 +2,9 @@
 
 // 미로 게임 규칙 (피그마 "04 크리스마스 게임" 게임 방법)
 // - 모델 출력값(0~1)으로 방향을 정한다: 상 0.0~0.2 / 좌 0.2~0.8 / 우 0.8~1.0
-// - 방향이 바뀌면 곧바로, 같은 방향이 2초 이어지면 같은 화살표를 하나 더 지팡이 맨 아래 칸에 넣는다
+// - 방향이 바뀌면 곧바로, 같은 방향이 1초 이어지면 같은 화살표를 하나 더 지팡이 맨 아래 칸에 넣는다
 //   (몸통 4칸이 가득 차 있으면 넣지 않고, 자리가 나면 넣는다 → 중간에 사라지는 화살표 없음)
-// - 2초마다 몸통 맨 위 화살표가 갈고리로 넘어간다
+// - 1초마다 몸통 맨 위 화살표가 갈고리로 넘어간다
 // - 정답 경로는 고정: 갈고리 화살표가 경로의 "다음 칸 방향"과 같을 때만 한 칸 전진하고, 다르면 그 자리에 있는다
 //   (틀린 방향이 나와도 뒤로 가거나 도착지에서 멀어지지 않는다)
 
@@ -12,8 +12,8 @@ export type Direction = "up" | "left" | "right";
 
 export const UP_MAX = 0.2;
 export const LEFT_MAX = 0.8;
-export const ARROW_REPEAT_MS = 2000;
-export const HOOK_INTERVAL_MS = 2000;
+export const ARROW_REPEAT_MS = 1000;
+export const HOOK_INTERVAL_MS = 1000;
 export const CANE_SLOTS = 4;
 
 export const directionFromScore = (score: number): Direction =>

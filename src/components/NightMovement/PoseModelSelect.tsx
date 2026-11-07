@@ -60,8 +60,10 @@ export default function PoseModelSelect({ activeName, onSelectEsp4, onError }: P
         aria-label="스켈레톤 모델 선택"
         disabled={switching}
         onClick={toggle}
+        title={activeName ? modelLabel(activeName) : undefined}
       >
-        {switching ? "바꾸는 중" : activeName ? modelLabel(activeName) : "—"}
+        {/* 긴 모델 이름은 칸 밖으로 튀어나오지 않게 "…"로 자른다 (전체 이름은 마우스를 올리면 보임) */}
+        <M.OptionText>{switching ? "바꾸는 중" : activeName ? modelLabel(activeName) : "—"}</M.OptionText>
         <Icon src={chevronDownIcon} alt="" width={16} height={16} />
       </SelectTrigger>
 
@@ -89,8 +91,9 @@ export default function PoseModelSelect({ activeName, onSelectEsp4, onError }: P
                 aria-selected={name === activeName}
                 $selected={name === activeName}
                 onClick={() => choose(name)}
+                title={modelLabel(name)}
               >
-                {modelLabel(name)}
+                <M.OptionText>{modelLabel(name)}</M.OptionText>
                 {name === activeName && <M.Check>✓</M.Check>}
               </M.RangeOption>
             ))}

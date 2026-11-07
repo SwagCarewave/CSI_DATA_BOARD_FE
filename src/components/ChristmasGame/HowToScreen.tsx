@@ -106,7 +106,7 @@ function PageTwo() {
         <br />
         <br />
         <span>
-          ③ 2초마다<Regular> 몸통 맨 위 화살표가 </Regular>갈고리<Regular>로 넘어가요.</Regular>
+          ③ 1초마다<Regular> 몸통 맨 위 화살표가 </Regular>갈고리<Regular>로 넘어가요.</Regular>
         </span>
         <br />
         <br />
@@ -123,11 +123,11 @@ function PageTwo() {
         <br />
         <Colored $color={gameColors.alert}>※ 주의!</Colored>
         <Caution>
-          동일한 동작이 <Regular>2초 동안 이어지면</Regular>
+          동일한 동작이 <Regular>1초 동안 이어지면</Regular>
           <br />
           동일하게 생긴 화살표가 <Regular>하나 더 생성됩니다.</Regular>
           <br />
-          단, <Regular>2초가 되지 않았더라도 </Regular>새로운 임계값에 도달하면
+          단, <Regular>1초가 되지 않았더라도 </Regular>새로운 임계값에 도달하면
           <br />
           <Regular>해당하는 </Regular>화살표가 곧바로 생성됩니다.
         </Caution>

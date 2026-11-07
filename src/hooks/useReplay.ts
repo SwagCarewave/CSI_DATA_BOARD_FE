@@ -27,6 +27,8 @@ export function useReplay(analysisId: string | null, range: { startMs: number; e
   const [pose, setPose] = useState<{ analysisId: string; model: PoseDrawModel | null; current: PoseReplayFrame | null } | null>(
     null,
   );
+  // 재생 중 넘어짐 알림이 새로 켜진 시각 (대시보드 낙상 경고창용)
+  const [fall, setFall] = useState<{ analysisId: string; at: number } | null>(null);
   const seekTimer = useRef<number | undefined>(undefined);
 
   const startMs = range?.startMs ?? 0;
@@ -43,6 +45,7 @@ export function useReplay(analysisId: string | null, range: { startMs: number; e
     if (!analysisId) return;
     let cancelled = false;
     let close: (() => void) | undefined;
+    let falling = false;
 
     (async () => {
       try {
@@ -52,6 +55,15 @@ export function useReplay(analysisId: string | null, range: { startMs: number; e
         close = openSocket<ReplayMessage>(replaySocketPath(created.id), {
           onMessage: (message) => {
             if (message.type === "state" || message.type === "tick") setReplay(message.replay);
+            // 넘어짐 알림이 꺼져 있다가 켜지는 순간 한 번 (배속 재생에서도 놓치지 않도록 tick 사이 프레임까지 본다)
+            if (message.type === "tick" || message.type === "state") {
+              const frames = [...(message.type === "tick" ? (message.poses ?? []) : []), ...(message.current ? [message.current] : [])];
+              if (frames.length) {
+                const nowFalling = frames.some((frame) => frame.fall_alarm);
+                if (nowFalling && !falling) setFall({ analysisId, at: Date.now() });
+                falling = frames.at(-1)!.fall_alarm;
+              }
+            }
             if (message.type === "state" && message.model !== undefined) {
               setPose({ analysisId, model: message.model, current: message.current ?? null });
             } else if ((message.type === "state" || message.type === "tick") && message.current !== undefined) {
@@ -149,5 +161,6 @@ export function useReplay(analysisId: string | null, range: { startMs: number; e
     setSpeed,
     poseModel: pose?.analysisId === analysisId ? pose.model : null,
     poseCurrent: pose?.analysisId === analysisId ? pose.current : null,
+    fallAlarmAt: fall?.analysisId === analysisId ? fall.at : null,
   };
 }

@@ -80,7 +80,8 @@ export function useRecording(session: Session | null, nowMs: number) {
   const canDownload = sessionStatus === "stopped" && !!current?.downloadable && !expired;
   // ESP 6대 녹화는 .bin (기록 조회에 그대로 올리면 스켈레톤·그래프), 4대는 CSV
   const format = current?.format === "bin" ? "bin" : "csv";
-  const fileLabel = format === "bin" ? "BIN" : "CSV";
+  // 버튼 글자: 6대 녹화(.bin)는 "CSI 추출", 4대는 "CSV 추출" (받는 파일 형식은 그대로)
+  const fileLabel = format === "bin" ? "CSI" : "CSV";
 
   let hint: string;
   if (!session) hint = "관찰 모드 관찰을 마치면 CSV를 받을 수 있습니다.";

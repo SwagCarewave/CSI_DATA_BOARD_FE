@@ -72,6 +72,15 @@ export const RangeOption = styled.button<{ $selected: boolean }>`
   }
 `;
 
+// 메뉴·선택 버튼 안의 글자: 길면 한 줄로 자르고 "…" 표시
+export const OptionText = styled.span`
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
 export const Check = styled.span<{ $color?: string }>`
   color: ${({ $color }) => $color ?? cw.menuCheck};
 `;
