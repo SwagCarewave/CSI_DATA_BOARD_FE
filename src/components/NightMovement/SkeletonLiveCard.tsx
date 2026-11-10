@@ -45,6 +45,7 @@ function drawSkeleton(
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, width, height);
   if (!model || !pose || width === 0 || height === 0) return;
+  if (pose.person_present === false) return;
 
   const [imageWidth, imageHeight] = model.image_size ?? [width, height];
   const scale = Math.min(width / imageWidth, height / imageHeight);
@@ -93,6 +94,8 @@ function drawSkeleton(
 
 type OverlayInfo = { title: string; caption: string; progress?: number } | null;
 
+const NOBODY: OverlayInfo = { title: "영역 안에 사람이 없습니다.", caption: "ESP 6대 안쪽으로 들어오면 스켈레톤이 표시됩니다." };
+
 function overlayFor(s: PoseState): OverlayInfo {
   if (s.unavailable) return { title: "서버에서 자세 모델이 꺼져 있습니다.", caption: "백엔드 설정을 확인해 주세요." };
   if (!s.connected) return { title: "서버에 연결하는 중입니다.", caption: "잠시만 기다려 주세요." };
@@ -102,13 +105,18 @@ function overlayFor(s: PoseState): OverlayInfo {
       : { title: "ESP 6대 신호를 기다리는 중입니다.", caption: "ESP가 연결되면 스켈레톤이 표시됩니다." };
   }
   if (s.calibration?.active) {
+    const emptyRoom = s.calibration.mode === "empty_room";
+    const percent = Math.round(s.calibration.progress * 100);
     return {
-      title: "서서 가만히 있어 주세요.",
-      caption: `보정 중 ${Math.round(s.calibration.progress * 100)}%`,
+      title: emptyRoom ? "ESP 6대 영역 밖으로 나가 방을 비워 주세요." : "서서 가만히 있어 주세요.",
+      caption: emptyRoom
+        ? `빈 방 보정 중 ${percent}% · 약 ${Math.ceil((1 - s.calibration.progress) * s.calibration.seconds)}초 남음`
+        : `보정 중 ${percent}%`,
       progress: s.calibration.progress,
     };
   }
   if (!s.pose) return { title: "자세를 추정하는 중입니다.", caption: "잠시만 기다려 주세요." };
+  if (s.pose.person_present === false) return NOBODY;
   if ((s.secondsSinceLastRecord ?? 0) > LOST_AFTER_SEC) {
     return { title: "ESP 신호가 끊겼습니다.", caption: "마지막으로 추정한 자세를 표시하고 있습니다." };
   }
@@ -118,7 +126,7 @@ function overlayFor(s: PoseState): OverlayInfo {
 function replayOverlay(model: PoseDrawModel | null, current: PoseReplayFrame | null, notice?: OverlayInfo): OverlayInfo {
   if (notice) return notice;
   if (!model) return { title: "재생을 준비하는 중입니다.", caption: "잠시만 기다려 주세요." };
-  if (current) return null;
+  if (current) return current.person_present === false ? NOBODY : null;
   return model.image_size
     ? { title: "보정 구간입니다.", caption: "13관절 모델은 녹화 앞 10초 동안 스켈레톤이 없습니다." }
     : { title: "이 시각의 스켈레톤이 없습니다.", caption: "재생바를 옮겨 보세요." };
@@ -144,6 +152,7 @@ export default function SkeletonLiveCard({ onSelectEsp4, replay }: SkeletonLiveC
   }, [size.width, size.height, model, pose]);
 
   const overlay = replay ? replayOverlay(replay.model, replay.current, replay.notice) : overlayFor(feed);
+  const nobody = pose?.person_present === false;
   const linkTone = feed.ready ? "ok" : feed.linksOk > 0 ? "warn" : "off";
 
   const recalibrate = () => {
@@ -169,7 +178,7 @@ export default function SkeletonLiveCard({ onSelectEsp4, replay }: SkeletonLiveC
       </S.Header>
 
       <S.Screen ref={screenRef}>
-        <S.Canvas ref={canvasRef} role="img" aria-label={pose ? `${pose.action.label}, ${pose.posture.label}` : "스켈레톤 없음"} />
+        <S.Canvas ref={canvasRef} role="img" aria-label={pose && !nobody ? `${pose.action.label}, ${pose.posture.label}` : "스켈레톤 없음"} />
         {overlay && (
           <S.Overlay>
             {overlay.title}
@@ -185,8 +194,10 @@ export default function SkeletonLiveCard({ onSelectEsp4, replay }: SkeletonLiveC
             <em>{actionError}</em>
           </S.Status>
         ) : (
-          <S.Status $dim={!pose || pose.posture.code === "uncertain"}>
-            {pose ? (
+          <S.Status $dim={!pose || nobody || pose.posture.code === "uncertain"}>
+            {nobody ? (
+              <em>사람 없음</em>
+            ) : pose ? (
               <>
                 {pose.action.label} <em>· {pose.posture.label}</em>
               </>
