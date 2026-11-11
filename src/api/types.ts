@@ -262,6 +262,9 @@ export interface PoseFrame {
   direction: "up" | "left" | "right";
   direction_ko: string;
   fall_alarm: boolean;
+  /** 빈 방 보정 모델(v5)만: ESP 6대 영역 안에 사람이 없으면 false. null/없음이면 사람 감지를 하지 않는 모델 */
+  person_present?: boolean | null;
+  presence_score?: number | null;
 }
 
 export interface PoseCalibration {
@@ -269,6 +272,8 @@ export interface PoseCalibration {
   active: boolean;
   progress: number;
   seconds: number;
+  /** stand: 사람이 서서 가만히 (v3) · empty_room: 빈 방 (v5) */
+  mode?: "stand" | "empty_room" | null;
 }
 
 export type PoseLinkStatus = "ok" | "weak" | "lost" | "none";
